@@ -1,16 +1,51 @@
 import java.io.*;
+import java.net.Socket;
+import java.net.UnknownHostException;
 import java.security.*;
 import javax.crypto.*;
 
 public class Client {
 
 	public Client() {
-		// TODO Auto-generated constructor stub
+	
 	}
 
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
+		String sentence;
+		Socket clientSocket = null;
+		try {
+			clientSocket = new Socket("myname.domain.com", 80);
+		} catch (UnknownHostException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		DataOutputStream out  = null;
+		try {
+			out = new DataOutputStream(clientSocket.getOutputStream());
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+        BufferedReader in = null;
+		try {
+			in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
 
+        System.out.println("Ready");
+        try {
+        sentence = in.readLine();
+			out.writeBytes(sentence + '\n');
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 
