@@ -6,16 +6,15 @@ import javax.crypto.*;
 
 public class Client {
 
-	public Client() {
+	DataOutputStream out;
+	Key pubKey;
+	Key privKey;
+	Socket clientSocket = null;
 	
-	}
-
-	public static void main(String[] args) {
-		// TODO Auto-generated method stub
-		String sentence;
-		Socket clientSocket = null;
+	public Client() {
 		try {
-			clientSocket = new Socket("localhost", 8080);
+			clientSocket = new Socket("localhost", 80);
+			out = new DataOutputStream(this.clientSocket.getOutputStream());
 		} catch (UnknownHostException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
@@ -23,35 +22,61 @@ public class Client {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
-		DataOutputStream out  = null;
-		try {
-			out = new DataOutputStream(clientSocket.getOutputStream());
-		} catch (IOException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
-        BufferedReader in = null;
-		try {
-			in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-		} catch (IOException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
+	}
 
-        System.out.println("Ready");
+	public static void main(String[] args) throws IOException {
+		// TODO Auto-generated method stub
         while(true) {
-	        try {
-	        sentence = System.console().readLine();
-				out.writeBytes(sentence + '\n');
+	        String command = System.console().readLine();
+	        Client client = new Client();
+	        switch (command) {
+	        
+			case "register":
+			client.	Testregister();
+				break;
 				
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+			case "put":
+			client.	Testput();
+				break;
+				
+			case "get":
+			client.	Testget();
+				break;
+
+			default:
+				break;
 			}
         }
 	}
 
 
+	public void Testregister() throws IOException{
+		String TestpubKey="banana";
+		
+		out.writeBytes("register");
+		out.writeBytes(TestpubKey);
+	}
+	
+	public void Testput() throws IOException{
+		String TestpubKey = "banana";
+		String Testdomain = "url";
+		String Testusername = "Cena";
+		String Testpassword = "123";
+		
+		out.writeBytes("put");
+		out.writeBytes(TestpubKey + Testdomain + Testusername + Testpassword);
+	}
+	
+	public void Testget() throws IOException{
+		String TestpubKey = "banana";
+		String Testdomain = "url";
+		String Testusername = "Cena";
+		String Testpassword = "123";
+		
+		out.writeBytes("get");
+		out.writeBytes(TestpubKey + Testdomain + Testusername + Testpassword);
+	}
+	
 	public void register(Key publicKey){
 		
 	}
@@ -63,4 +88,5 @@ public class Client {
 	public void get(Key publicKey, byte[] domain, byte[] username, byte[] password){
 		
 	}
+	
 }
