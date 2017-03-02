@@ -1,16 +1,38 @@
 import java.io.*;
-import java.security.*;
-import javax.crypto.*;
+import java.net.ServerSocket;
+import java.net.Socket;
+/*import java.security.*;
+import javax.crypto.*;*/
 
 public class Server {
 
-	public Server() {
-		// TODO Auto-generated constructor stub
-	}
-
 	public static void main(String[] args) {
-		// TODO Auto-generated method stub
+		ServerSocket serverSocket = null;
 
+        boolean listeningSocket = true;
+        try {
+            serverSocket = new ServerSocket(2343);
+        } catch (IOException e) {
+            System.err.println("Could not listen on port: 2343");
+        }
+
+        while(listeningSocket){
+            Socket clientSocket = null;
+			try {
+				clientSocket = serverSocket.accept();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+            ServerThread thread = new ServerThread(clientSocket);
+            thread.start();
+        }
+        try {
+			serverSocket.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 }
