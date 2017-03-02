@@ -15,7 +15,7 @@ public class Client {
 		String sentence;
 		Socket clientSocket = null;
 		try {
-			clientSocket = new Socket("myname.domain.com", 80);
+			clientSocket = new Socket("localhost", 40444);
 		} catch (UnknownHostException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
@@ -39,13 +39,16 @@ public class Client {
 		}
 
         System.out.println("Ready");
-        try {
-        sentence = in.readLine();
-			out.writeBytes(sentence + '\n');
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+        while(true) {
+	        try {
+	        sentence = System.console().readLine();
+				out.writeBytes(sentence + '\n');
+				
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+        }
 	}
 
 
