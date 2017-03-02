@@ -15,7 +15,7 @@ public class Client {
 		String sentence;
 		Socket clientSocket = null;
 		try {
-			clientSocket = new Socket("localhost", 40444);
+			clientSocket = new Socket("localhost", 8080);
 		} catch (UnknownHostException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
