@@ -13,7 +13,7 @@ public class Client {
 	
 	public Client() {
 		try {
-			clientSocket = new Socket("localhost", 80);
+			clientSocket = new Socket("localhost", 8080);
 			out = new DataOutputStream(this.clientSocket.getOutputStream());
 		} catch (UnknownHostException e1) {
 			// TODO Auto-generated catch block
