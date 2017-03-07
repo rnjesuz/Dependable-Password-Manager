@@ -14,47 +14,49 @@ public class Client {
 	public Client() {
 		try {
 			clientSocket = new Socket("localhost", 8080);
-			out = new DataOutputStream(this.clientSocket.getOutputStream());
+			out = new DataOutputStream(clientSocket.getOutputStream());
 		} catch (UnknownHostException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		} catch (IOException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
-		}
+		} 
+		System.out.println("Ready");
 	}
 
 	public static void main(String[] args) throws IOException {
-		// TODO Auto-generated method stub
+		Client client = new Client();
+
         while(true) {
 	        String command = System.console().readLine();
-	        Client client = new Client();
+	        System.out.println(command);
 	        switch (command) {
 	        
-			case "register":
-			client.	Testregister();
-				break;
-				
-			case "put":
-			client.	Testput();
-				break;
-				
-			case "get":
-			client.	Testget();
-				break;
+				case "register":
+				client.Testregister();
+					break;
+					
+				case "put":
+				client.Testput();
+					break;
+					
+				case "get":
+				client.Testget();
+					break;
 
-			default:
-				break;
+				default:
+					break;
 			}
         }
 	}
 
 
 	public void Testregister() throws IOException{
-		String TestpubKey="banana";
-		
-		out.writeBytes("register");
-		out.writeBytes(TestpubKey);
+		String TestpubKey = "banana";
+		out.flush();
+		out.writeBytes("register: " + TestpubKey + '\n');
+		//out.writeBytes(TestpubKey);
 	}
 	
 	public void Testput() throws IOException{
@@ -62,9 +64,8 @@ public class Client {
 		String Testdomain = "url";
 		String Testusername = "Cena";
 		String Testpassword = "123";
-		
-		out.writeBytes("put");
-		out.writeBytes(TestpubKey + Testdomain + Testusername + Testpassword);
+		out.flush();
+		out.writeBytes("put: " + TestpubKey + Testdomain + Testusername + Testpassword +'\n');
 	}
 	
 	public void Testget() throws IOException{
@@ -73,7 +74,7 @@ public class Client {
 		String Testusername = "Cena";
 		String Testpassword = "123";
 		
-		out.writeBytes("get");
+		out.writeBytes("get: ");
 		out.writeBytes(TestpubKey + Testdomain + Testusername + Testpassword);
 	}
 	

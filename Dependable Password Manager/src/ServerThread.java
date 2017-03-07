@@ -14,27 +14,35 @@ public class ServerThread extends Thread{
 
     public void run(){
             //Read input and process here
-    	try {
-			BufferedReader in = new BufferedReader(new InputStreamReader(this.socket.getInputStream()));
-			switch(in.readLine()) {
-			case "register":
-				System.out.println("register" + in.readLine());
-				break;
-				
-			case "put":
-				System.out.println("put" + in.readLine());
-				break;
-				
-			case "get":
-				System.out.println("get" + in.readLine());
-				break;
+    	while(socket.isConnected()){
 
-			default:
-				break;
+	    	try {
+				BufferedReader in = new BufferedReader(new InputStreamReader(this.socket.getInputStream()));
+				String outcenas = in.readLine();
+				String[] array = outcenas.split(" ", 0);
+				System.out.println("input test: " + array[0]);
+
+				switch(array[0]){
+					case "register:":
+						System.out.println(outcenas);
+						break;
+						
+					case "put:":
+						System.out.println(outcenas);
+						break;
+						
+					case "get:":
+						System.out.println(outcenas);
+						break;
+
+					default:
+						System.out.println();
+						break;
+					}
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		}
     }
             //implement your methods here
