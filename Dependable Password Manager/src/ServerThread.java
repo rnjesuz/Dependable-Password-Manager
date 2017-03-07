@@ -1,5 +1,6 @@
 import java.io.*;
 import java.net.Socket;
+import java.security.*;
 
 public class ServerThread extends Thread{
 
@@ -18,21 +19,22 @@ public class ServerThread extends Thread{
 
 	    	try {
 				BufferedReader in = new BufferedReader(new InputStreamReader(this.socket.getInputStream()));
-				String outcenas = in.readLine();
-				String[] array = outcenas.split(" ", 0);
-				System.out.println("input test: " + array[0]);
-
-				switch(array[0]){
+				String input = in.readLine();
+				String[] inputParsed = input.split(" ", 0);
+				System.out.println("input test: " + inputParsed[0]);
+				String command = inputParsed[0];
+				
+				switch(command){
 					case "register:":
-						System.out.println(outcenas);
+						System.out.println(input);
 						break;
 						
 					case "put:":
-						System.out.println(outcenas);
+						System.out.println(input);
 						break;
 						
 					case "get:":
-						System.out.println(outcenas);
+						System.out.println(input);
 						break;
 
 					default:
@@ -46,4 +48,17 @@ public class ServerThread extends Thread{
     }
             //implement your methods here
 
+    public void register(Key publicKey){
+    	
+    }
+    
+    public void put(Key publicKey, byte[] domain, byte[] username, byte[] password){
+    	
+    }
+    
+    public byte[] get(Key publicKey, byte[] domain, byte[] username){
+    	//TODO change return to querried password
+		return username;
+    	
+    }
 }
