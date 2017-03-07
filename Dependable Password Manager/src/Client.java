@@ -11,7 +11,11 @@ public class Client {
 	Key privKey;
 	Socket clientSocket = null;
 	
-	public Client() {
+	public Client(String username, String password) {
+
+		KeyStore ks = KeyStore.getInstance("JKS");
+		init(ks, username, password);
+
 		try {
 			clientSocket = new Socket("localhost", 8080);
 			out = new DataOutputStream(clientSocket.getOutputStream());
@@ -26,7 +30,12 @@ public class Client {
 	}
 
 	public static void main(String[] args) throws IOException {
-		Client client = new Client();
+		
+		String username = System.console().reaLine();
+		String password = System.console().readLine();
+
+
+		Client client = new Client(username, password);
 
         while(true) {
 	        String command = System.console().readLine();
@@ -76,6 +85,16 @@ public class Client {
 		
 		out.writeBytes("get: ");
 		out.writeBytes(TestpubKey + Testdomain + Testusername + Testpassword);
+	}
+
+	public void init(KeyStore ks, String username, String password) {
+		// TODO ECLIPSE VER EXCEPTION
+		try {
+			ks.getKey(username, password.toCharArray());
+		} catch(Exception e) {
+			ks.setEntry(username); //TODO REVER 
+		}
+
 	}
 	
 	public void register(Key publicKey){

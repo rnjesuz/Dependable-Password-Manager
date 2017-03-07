@@ -36,7 +36,6 @@ public class ServerThread extends Thread{
 						break;
 
 					default:
-						System.out.println();
 						break;
 					}
 			} catch (IOException e) {

@@ -14,7 +14,7 @@ public class Server {
             serverSocket = new ServerSocket(8080);
           System.out.println(serverSocket.getLocalPort());
         } catch (IOException e) {
-            System.err.println("Could not listen on port: 2343");
+            System.err.println("Could not listen on port");
         }
 
         while(listeningSocket){
