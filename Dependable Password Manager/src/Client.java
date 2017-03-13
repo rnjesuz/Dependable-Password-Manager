@@ -12,8 +12,13 @@ public class Client {
 	Socket clientSocket = null;
 	
 	public Client(String username, String password) {
+		KeyStore ks = null; //has to be initialized 
+		try {
+			ks = KeyStore.getInstance("JKS");
+		} catch (KeyStoreException e){
+			//TODO
+		}
 
-		KeyStore ks = KeyStore.getInstance("JKS");
 		init(ks, username, password);
 
 		try {
@@ -31,7 +36,7 @@ public class Client {
 
 	public static void main(String[] args) throws IOException {
 		
-		String username = System.console().reaLine();
+		String username = System.console().readLine();
 		String password = System.console().readLine();
 
 
@@ -92,7 +97,7 @@ public class Client {
 		try {
 			ks.getKey(username, password.toCharArray());
 		} catch(Exception e) {
-			ks.setEntry(username); //TODO REVER 
+			//links.setEntry(username); //TODO REVER 
 		}
 
 	}
