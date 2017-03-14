@@ -2,6 +2,7 @@ import java.io.*;
 import java.math.BigInteger;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
 import java.security.*;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
@@ -15,6 +16,8 @@ public class Client {
 	static Key pubKey;
 	static Key privKey;
 	Socket clientSocket = null;
+	static String username=null;
+	static String password=null;
 	
 	public Client(String username, String password) {
 		
@@ -33,8 +36,7 @@ public class Client {
 
 	public static void main(String[] args) throws IOException {
 		
-		String username=null;
-		String password=null;
+		
 		
 		while (true) {
 			
@@ -65,7 +67,10 @@ public class Client {
 	        switch (command) {
 	        
 				case "register":
-				client.Testregister();
+					if(pubKey != null) {
+						client.register_user();
+					}
+				
 					break;
 					
 				case "put":
@@ -86,8 +91,7 @@ public class Client {
 	public void Testregister() throws IOException{
 		String TestpubKey = "banana";
 		out.flush();
-		out.writeBytes("register: " + TestpubKey + '\n');
-		//out.writeBytes(TestpubKey);
+		out.writeBytes("register:#" + '\n');
 	}
 	
 	public void Testput() throws IOException{
@@ -194,16 +198,28 @@ public class Client {
 		return kp;
 	}
 	
-	public void register(Key publicKey){
+	public void register_user(){
 		
+			ByteBuffer bb = ByteBuffer.allocate(4);
+            bb.putInt(pubKey.getEncoded().length);
+            try {
+            	out.flush();
+				out.writeBytes("register#" + username + "#" + '\n');
+				clientSocket.getOutputStream().write(bb.array());
+				clientSocket.getOutputStream().write(pubKey.getEncoded());
+				clientSocket.getOutputStream().flush();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} 
 	}
 	
-	public void put(Key publicKey, byte[] domain, byte[] username, byte[] password){
+	public void save_password(byte[] domain, byte[] username, byte[] password){
 			
 	}
 	
-	public void get(Key publicKey, byte[] domain, byte[] username, byte[] password){
-		
+	public void retrieve_password(byte[] domain, byte[] username, byte[] password){
+		//Should return password from server
 	}
 	
 }

@@ -1,5 +1,7 @@
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
@@ -23,6 +25,7 @@ import java.nio.ByteBuffer;
 public class ServerThread extends Thread {
 
 	private Socket socket = null;
+	private String clientUsername = null;
 
 	public ServerThread(Socket socket) {
 
@@ -38,13 +41,14 @@ public class ServerThread extends Thread {
 			try {
 				BufferedReader in = new BufferedReader(new InputStreamReader(this.socket.getInputStream()));
 				String input = in.readLine();
-				String[] inputParsed = input.split(" ", 0);
+				String[] inputParsed = input.split("#", 0);
 				System.out.println("input test: " + inputParsed[0]);
 				String command = inputParsed[0];
 
 				switch (command) {
-					case "register:":
+					case "register":
 						System.out.println(input);
+						clientUsername = inputParsed[1];
             			
             			register(getPublicKey());
 
@@ -78,7 +82,7 @@ public class ServerThread extends Thread {
 
 	public void register(Key publicKey) {
 		try {
-			File file = new File(publicKey.toString() + ".txt");
+			File file = new File(clientUsername);
 			if (file.createNewFile()) {
 			} else {
 				System.out.println("User already registered");
@@ -86,6 +90,22 @@ public class ServerThread extends Thread {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		
+		byte[] key = publicKey.getEncoded();
+		FileOutputStream keyfos;
+		try {
+			keyfos = new FileOutputStream(clientUsername);
+			keyfos.write(key);
+			keyfos.close();
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		
 	}
 
 	public void put(Key publicKey, byte[] domain, byte[] username, byte[] password) {
@@ -123,24 +143,21 @@ public class ServerThread extends Thread {
 	*
 	*/
 	public Key getPublicKey(){
-		Key serverPubKey = null;
+		Key pubKey = null;
 
 		byte[] lenb = new byte[4];
         try {
 			socket.getInputStream().read(lenb,0,4);
-		
-        ByteBuffer bb = ByteBuffer.wrap(lenb);
-        int len = bb.getInt();
+			
+	        ByteBuffer bb = ByteBuffer.wrap(lenb);
+	        int len = bb.getInt();
 
-        System.out.println(len);
-
-        byte[] servPubKeyBytes = new byte[len];
-        socket.getInputStream().read(servPubKeyBytes);
-        System.out.println(DatatypeConverter.printHexBinary(servPubKeyBytes));
-        X509EncodedKeySpec ks = new X509EncodedKeySpec(servPubKeyBytes);
-            			
-        KeyFactory kf = KeyFactory.getInstance("RSA");
-        serverPubKey = kf.generatePublic(ks);  			
+	        byte[] pubKeyBytes = new byte[len];
+	        socket.getInputStream().read(pubKeyBytes);
+	        X509EncodedKeySpec ks = new X509EncodedKeySpec(pubKeyBytes);
+	            			
+	        KeyFactory kf = KeyFactory.getInstance("RSA");
+	        pubKey = kf.generatePublic(ks);  			
        
         } catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -152,6 +169,6 @@ public class ServerThread extends Thread {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} 	
-        return serverPubKey;
+        return pubKey;
 	}
 }
