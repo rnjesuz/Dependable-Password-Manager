@@ -53,14 +53,14 @@ public class ServerThread extends Thread {
 					case "put:":
 						System.out.println(input);
 
-						//put(getPublicKey(), );
+						put(getPublicKey(), inputParsed[1], inputParsed[2], inputParsed[3]);
 
 						break;
 
 					case "get:":
 						System.out.println(input);
 
-						//get(getPublicKey(), );
+						get(getPublicKey(), inputParsed[1], inputParsed[2], inputParsed[3]);
 						break;
 
 					default:
@@ -90,8 +90,7 @@ public class ServerThread extends Thread {
 			String _domain = new String(domain, StandardCharsets.UTF_8);
 			String _username = new String(username, StandardCharsets.UTF_8);
 			String _password = new String(password, StandardCharsets.UTF_8);
-			List<String> lines = Arrays
-					.asList(_domain.toString() + "|" + _username.toString() + "|" + _password.toString());
+			List<String> lines = Arrays.asList(_domain.toString() + "|" + _username.toString() + "|" + _password.toString());
 			Path file = Paths.get(publicKey.toString() + ".txt");
 			Files.write(file, lines, Charset.forName("UTF-8"));
 		} catch (IOException e) {
