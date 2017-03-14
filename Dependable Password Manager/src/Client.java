@@ -1,29 +1,22 @@
 import java.io.*;
+import java.math.BigInteger;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.security.*;
 import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+import java.util.Date;
 
 import javax.crypto.*;
 
 public class Client {
 
 	DataOutputStream out;
-	Key pubKey;
-	Key privKey;
+	static Key pubKey;
+	static Key privKey;
 	Socket clientSocket = null;
 	
 	public Client(String username, String password) {
-
-		KeyStore ks;
-		
-		try {
-			//Specify keystore type in the future
-			ks = KeyStore.getInstance(KeyStore.getDefaultType());
-			init(ks, username, password);
-		} catch (KeyStoreException e) {
-			System.out.println("KeyStoreException");
-		}
 		
 		try {
 			clientSocket = new Socket("localhost", 8080);
@@ -40,10 +33,30 @@ public class Client {
 
 	public static void main(String[] args) throws IOException {
 		
-		String username = System.console().readLine();
-		String password = System.console().readLine();
-
-
+		String username=null;
+		String password=null;
+		
+		while (true) {
+			
+			System.out.print("username: ");
+			username = System.console().readLine();
+			System.out.print("password: ");
+			password = System.console().readLine();
+			
+			KeyStore ks = null;	
+			
+			try {
+				//Specify keystore type in the future
+				ks = KeyStore.getInstance("JKS");
+				init(ks, username, password);
+				break;
+			} catch (KeyStoreException e1) {
+				System.out.println("KeyStoreException");
+			} catch(WrongPasswordException e2) {
+				System.out.println("Wrong Password, try again");
+			}
+		}
+		
 		Client client = new Client(username, password);
 
         while(true) {
@@ -96,7 +109,7 @@ public class Client {
 		out.writeBytes(TestpubKey + Testdomain + Testusername + Testpassword);
 	}
 
-	public void init(KeyStore ks, String username, String password) {
+	public static void init(KeyStore ks, String username, String password) throws WrongPasswordException {
 		
 		java.io.FileInputStream fis = null;
 	    try {
@@ -104,46 +117,81 @@ public class Client {
 	        //gets keystore if it already exists
 	        ks.load(fis, password.toCharArray());
 	        System.out.println("KeyStore loaded");
-	    } catch (NoSuchAlgorithmException | CertificateException e) {
-	    	e.printStackTrace();
-		} 
-	    catch (IOException e) {
-	    	//I think this exception indicates that the keystore doesn't exist for the given password
-	    	//load keystore with null passsword -> empty keystore
-	    	System.out.println("Create new keystore");
-	    	createNewKeyStore(ks, fis, username, password);
-	    }
+	        
+	        privKey = ks.getKey(username, password.toCharArray());
+	        pubKey = ks.getCertificate(username).getPublicKey();
+	        
+	        System.out.println(pubKey.getAlgorithm());
+			System.out.println(privKey.getAlgorithm());
 	    
-	    /*finally {
-	        if (fis != null) {
-	            fis.close();
-	        }
-	    }*/
-	    
-		/*ks.getKey(username, password.toCharArray());
-		ks.setEntry(username, null, null);*/
+		} catch (IOException e) {
+	    	//User has WRONG PASSWORD or USER DOESNT HAVE KEYSTORE
+			//Adjust filepath if necessary
+			File folder = new File (".");
+			File[] listOfFiles = folder.listFiles();
 
+		    for (int i = 0; i < listOfFiles.length; i++) {
+		      if (listOfFiles[i].getName().equals(username + "KeyStore")) {
+		    	  System.out.println("Wrong Password, try again");
+		    	  throw new WrongPasswordException();
+		      }
+		    }
+			
+	    	createNewKeyStore(ks, fis, username, password);
+	    	
+	    } catch (NoSuchAlgorithmException | CertificateException
+	    		| UnrecoverableKeyException | KeyStoreException e) {
+	    	e.printStackTrace();
+	    }
 	}
 	
-	public void createNewKeyStore(KeyStore ks, java.io.FileInputStream fis,
+	
+	public static void createNewKeyStore(KeyStore ks, java.io.FileInputStream fis,
 			String username, String password) {
-		/*KeyStore.ProtectionParameter protParam =
-		        new KeyStore.PasswordProtection(password.toCharArray());*/
 		
 		try {
-			ks.load(fis, null);
-			
-			// store away the keystore
-		    java.io.FileOutputStream fos = null;
+		    
+		    ks.load(null, password.toCharArray());
+		    
+		    System.out.println("Created new KeyStore");
+		    
+		    //Create keys and store in keystore
+		    KeyPair kp = createKeyPair(); 		
+		    
+			GenCert gen = new GenCert();
+		    X509Certificate[] certificate = gen.generateCertificate(kp);
+		    
+		    ks.setKeyEntry(username, kp.getPrivate(), password.toCharArray(), certificate);
+		    
+		    privKey = kp.getPrivate();
+		    pubKey = ks.getCertificate(username).getPublicKey();
 		    
 		    //give key store same name as user?
-		    fos = new java.io.FileOutputStream(username + "KeyStore");
+		    java.io.FileOutputStream fos = new java.io.FileOutputStream(username + "KeyStore");
 		    ks.store(fos, password.toCharArray());
-		    System.out.println("Created new KeyStore");
+		    
 		} catch (NoSuchAlgorithmException | KeyStoreException |
 				CertificateException | IOException e) {
 			e.printStackTrace();
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
+	}
+	
+	public static KeyPair createKeyPair(){
+		KeyPairGenerator kpg;
+		KeyPair kp = null;
+		try {
+			kpg = KeyPairGenerator.getInstance("RSA");
+			kpg.initialize(1024);
+			kp = kpg.genKeyPair();
+			
+		} catch (NoSuchAlgorithmException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return kp;
 	}
 	
 	public void register(Key publicKey){
