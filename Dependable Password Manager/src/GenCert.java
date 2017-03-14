@@ -8,9 +8,7 @@ import java.security.cert.X509Certificate;
 import java.util.Date;
 import sun.security.x509.*;
 
-/**
- * Created by mm on 08/03/2017.
- */
+
 public class GenCert {
 
 
