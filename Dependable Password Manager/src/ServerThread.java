@@ -9,8 +9,16 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.Key;
+import java.security.KeyFactory;
+import java.security.NoSuchAlgorithmException;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.Arrays;
 import java.util.List;
+
+import javax.xml.bind.DatatypeConverter;
+
+import java.nio.ByteBuffer;
 
 public class ServerThread extends Thread {
 
@@ -35,20 +43,28 @@ public class ServerThread extends Thread {
 				String command = inputParsed[0];
 
 				switch (command) {
-				case "register:":
-					System.out.println(input);
-					break;
+					case "register:":
+						System.out.println(input);
+            			
+            			register(getPublicKey());
 
-				case "put:":
-					System.out.println(input);
-					break;
+						break;
 
-				case "get:":
-					System.out.println(input);
-					break;
+					case "put:":
+						System.out.println(input);
 
-				default:
-					break;
+						//put(getPublicKey(), );
+
+						break;
+
+					case "get:":
+						System.out.println(input);
+
+						//get(getPublicKey(), );
+						break;
+
+					default:
+						break;
 				}
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
@@ -56,7 +72,6 @@ public class ServerThread extends Thread {
 			}
 		}
 	}
-	// implement your methods here
 
 	public void register(Key publicKey) {
 		try {
@@ -99,5 +114,42 @@ public class ServerThread extends Thread {
 		}
 		
 		return output;
+	}
+
+	/*
+	* Auxiliary function to read and convert the public key
+	*
+	*/
+	public Key getPublicKey(){
+		Key serverPubKey = null;
+
+		byte[] lenb = new byte[4];
+        try {
+			socket.getInputStream().read(lenb,0,4);
+		
+        ByteBuffer bb = ByteBuffer.wrap(lenb);
+        int len = bb.getInt();
+
+        System.out.println(len);
+
+        byte[] servPubKeyBytes = new byte[len];
+        socket.getInputStream().read(servPubKeyBytes);
+        System.out.println(DatatypeConverter.printHexBinary(servPubKeyBytes));
+        X509EncodedKeySpec ks = new X509EncodedKeySpec(servPubKeyBytes);
+            			
+        KeyFactory kf = KeyFactory.getInstance("RSA");
+        serverPubKey = kf.generatePublic(ks);  			
+       
+        } catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (NoSuchAlgorithmException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InvalidKeySpecException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} 	
+        return serverPubKey;
 	}
 }
