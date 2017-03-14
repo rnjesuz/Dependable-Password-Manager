@@ -91,11 +91,11 @@ public class ServerThread extends Thread {
 			e.printStackTrace();
 		}
 		
-		byte[] key = publicKey.getEncoded();
+		String key = DatatypeConverter.printHexBinary(publicKey.getEncoded());
 		FileOutputStream keyfos;
 		try {
 			keyfos = new FileOutputStream(clientUsername);
-			keyfos.write(key);
+			keyfos.write(key.getBytes());			
 			keyfos.close();
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
