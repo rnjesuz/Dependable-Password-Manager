@@ -53,20 +53,23 @@ public class ServerThread extends Thread {
 					case "put:":
 						System.out.println(input);
 
-						put(getPublicKey(), inputParsed[1], inputParsed[2], inputParsed[3]);
+						put(getPublicKey(), inputParsed[1].getBytes(), inputParsed[2].getBytes(), inputParsed[3].getBytes());
 
 						break;
 
 					case "get:":
 						System.out.println(input);
 
-						get(getPublicKey(), inputParsed[1], inputParsed[2], inputParsed[3]);
+						get(getPublicKey(), inputParsed[1].getBytes(), inputParsed[2].getBytes());
 						break;
 
 					default:
 						break;
 				}
 			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
