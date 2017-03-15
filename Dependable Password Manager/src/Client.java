@@ -31,6 +31,7 @@ public class Client {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		} 
+		sendUsername();
 		System.out.println("Ready");
 	}
 
@@ -61,6 +62,7 @@ public class Client {
 		
 		Client client = new Client(username, password);
 
+
         while(true) {
 	        String command = System.console().readLine();
 	        System.out.println(command);
@@ -74,7 +76,15 @@ public class Client {
 					break;
 					
 				case "put":
-				client.Testput();
+					byte[] domain, username, password;
+					System.out.println("Insert the desired domain:");
+					domain = encrypt(System.console().readLine(), pubKey);
+					System.out.println("Insert the desired username:");
+					username = encrypt(System.console().readLine(), pubKey);
+					System.out.println("Insert the desired password:");
+					password = encrypt(System.console().readLine(), pubKey);
+
+					client.save_password(domain, username, password);
 					break;
 					
 				case "get":
@@ -88,10 +98,15 @@ public class Client {
 	}
 
 
-	public void Testregister() throws IOException{
-		String TestpubKey = "banana";
-		out.flush();
-		out.writeBytes("register:#" + '\n');
+	public void sendUsername(){
+		try {
+			out.flush();
+			out.writeBytes("username#" + username + '\n');
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 	}
 	
 	public void Testput() throws IOException{
@@ -197,6 +212,39 @@ public class Client {
 		
 		return kp;
 	}
+
+	//USES PUBLIC KEY
+	public static byte[] encrypt(String text, Key key) {
+	    byte[] cipherText = null;
+	    try {
+	      // get an RSA cipher object and print the provider
+	      final Cipher cipher = Cipher.getInstance("RSA");
+	      // encrypt the plain text using the public key
+	      cipher.init(Cipher.ENCRYPT_MODE, key);
+	      cipherText = cipher.doFinal(text.getBytes());
+	    } catch (Exception e) {
+	      e.printStackTrace();
+	    }
+	    return cipherText;
+  	}
+
+  	//USES PRIVATE KEY
+  	public static String decrypt(byte[] text, Key key) {
+	    byte[] dectyptedText = null;
+	    try {
+	      // get an RSA cipher object and print the provider
+	      final Cipher cipher = Cipher.getInstance("RSA");
+
+	      // decrypt the text using the private key
+	      cipher.init(Cipher.DECRYPT_MODE, key);
+	      dectyptedText = cipher.doFinal(text);
+
+	    } catch (Exception ex) {
+	      ex.printStackTrace();
+    	}
+
+    	return new String(dectyptedText);
+  	}	
 	
 	public void register_user(){
 		
@@ -215,6 +263,13 @@ public class Client {
 	}
 	
 	public void save_password(byte[] domain, byte[] username, byte[] password){
+			try {
+				out.flush();
+				out.writeBytes("put#" + domain + "#" + username + "#" + password + "#" + '\n');
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 			
 	}
 	

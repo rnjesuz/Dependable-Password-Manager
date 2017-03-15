@@ -17,10 +17,14 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Scanner;
+import java.util.regex.Pattern;
 
 import javax.xml.bind.DatatypeConverter;
 
 import java.nio.ByteBuffer;
+
+import javax.crypto.*;
 
 public class ServerThread extends Thread {
 
@@ -46,15 +50,20 @@ public class ServerThread extends Thread {
 				String command = inputParsed[0];
 
 				switch (command) {
+					case "username":
+						clientUsername = inputParsed[1];
+
+						break;
+
 					case "register":
 						System.out.println(input);
 						clientUsername = inputParsed[1];
             			
-            			register(getPublicKey());
+            			register(receivePublicKey());
 
 						break;
 
-					case "put:":
+					case "put":
 						System.out.println(input);
 
 						put(getPublicKey(), inputParsed[1].getBytes(), inputParsed[2].getBytes(), inputParsed[3].getBytes());
@@ -113,8 +122,8 @@ public class ServerThread extends Thread {
 			String _domain = new String(domain, StandardCharsets.UTF_8);
 			String _username = new String(username, StandardCharsets.UTF_8);
 			String _password = new String(password, StandardCharsets.UTF_8);
-			List<String> lines = Arrays.asList(_domain.toString() + "|" + _username.toString() + "|" + _password.toString());
-			Path file = Paths.get(publicKey.toString() + ".txt");
+			List<String> lines = Arrays.asList(_domain.toString() + "|" + _username.toString() + "|" + _password.toString() +'\n');
+			Path file = Paths.get(clientUsername);
 			Files.write(file, lines, Charset.forName("UTF-8"));
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -138,11 +147,36 @@ public class ServerThread extends Thread {
 		return output;
 	}
 
+
+	public Key getPublicKey(){
+		Key output = null;
+
+		Scanner scan;
+		try {
+			scan = new Scanner(new File(clientUsername));
+			scan.useDelimiter(Pattern.compile("\n"));
+	    	String logicalLine = scan.next();
+
+	    	System.out.println(logicalLine);
+	    	output = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(DatatypeConverter.parseHexBinary(logicalLine)));
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InvalidKeySpecException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (NoSuchAlgorithmException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return output;
+	}
+
 	/*
 	* Auxiliary function to read and convert the public key
 	*
 	*/
-	public Key getPublicKey(){
+	public Key receivePublicKey(){
 		Key pubKey = null;
 
 		byte[] lenb = new byte[4];
