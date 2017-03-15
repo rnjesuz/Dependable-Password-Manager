@@ -277,11 +277,14 @@ public class Client {
 	
 	public void save_password(byte[] domain, byte[] username, byte[] password){
 			try {
-				String message = "put#" + domain + "#" + username + "#" + password + "#";
-				System.out.println(message);
 				out.flush();
-				out.writeInt(message.length());
-				out.writeBytes(message);
+				//String message = "put#" + domain + "#" + username + "#" + password + "#";
+				//System.out.println(message);
+				out.flush();
+
+				out.flush();
+
+				out.flush();
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
