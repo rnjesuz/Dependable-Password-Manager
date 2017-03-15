@@ -13,7 +13,7 @@ import javax.crypto.*;
 public class Client {
 
 	DataOutputStream out;
-	BufferedReader in;
+	DataInputStream in;
 	static Key pubKey;
 	static Key privKey;
 	Socket clientSocket = null;
@@ -25,7 +25,7 @@ public class Client {
 		try {
 			clientSocket = new Socket("localhost", 8080);
 			out = new DataOutputStream(clientSocket.getOutputStream());
-			in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+			in = new DataInputStream(clientSocket.getInputStream());
 		} catch (UnknownHostException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
@@ -317,7 +317,7 @@ public class Client {
 	}
 	
 	public void retrieve_password(byte[] domain, byte[] username){
-		String output = null;
+		byte[] inputByte = null;
 		try {
 				/*String message = "get#" + domain + "#" + username + "#";
 				System.out.println(message);
@@ -337,14 +337,17 @@ public class Client {
 				out.writeInt(username.length);
 				out.write(username);
 
+				int lenght = in.readInt();
+				inputByte = new byte[lenght]; 
+				in.readFully(inputByte, 0, inputByte.length);
 
-				output = in.readLine();
+				//output = in.readLine();
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 
-		System.out.println(decrypt(output.getBytes(), privKey));
+		System.out.println(decrypt(inputByte, privKey));
 	}
 	
 }

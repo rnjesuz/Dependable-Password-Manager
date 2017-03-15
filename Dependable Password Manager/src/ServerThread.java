@@ -4,6 +4,7 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
@@ -209,22 +210,37 @@ public class ServerThread extends Thread {
 
 	public byte[] get(Key publicKey, byte[] domain, byte[] username) throws Exception {
 		byte[] output = null;
+		String line;
+		String[] lineParsed;
 		
-		for (String line : Files.readAllLines(Paths.get(clientUsername))) {
-			String[] lineParsed = line.split("|", 0);
+		/*for (String line : Files.readAllLines(Paths.get(clientUsername))) {
+			String[] lineParsed = line.split("|", 0);*/
 
-			String _domain = new String(domain, StandardCharsets.UTF_8);
-			String _username = new String(username, StandardCharsets.UTF_8);
+			String _domain = new String(domain, "UTF-8");
+			System.out.println("YO" + _domain);
+			String _username = new String(username, "UTF-8");
+			System.out.println("YO" + _username);
 			/*if(Arrays.equals(lineParsed[0].getBytes(), _domain.getBytes()))
 				if(Arrays.equals(lineParsed[1].getBytes(), _username.getBytes()))
 					output = lineParsed[2].getBytes();*/
-			if (lineParsed[0].equals(_domain))
-				System.out.println("DEBUG 1");
-				if (lineParsed[1].equals(_username))
-					System.out.println("DEBUG 2");
-					output = lineParsed[2].getBytes();
-		}
+			BufferedReader br = new BufferedReader(new FileReader(clientUsername));
+    		br.readLine();//Ignore first line -> KEY
+
+			while ((line = br.readLine()) != null) {
+    			lineParsed = line.split("\\|", 0);
+    			System.out.println("aii" + lineParsed[0] + " " + lineParsed[1]);
+    			if (lineParsed[0].equals(_domain)){
+					System.out.println("DEBUG 1");
+					if (lineParsed[1].equals(_username)){
+						System.out.println("DEBUG 2");
+						output = lineParsed[2].getBytes();
+						break;
+					}
+    			}
+			}
+		
 		out.flush();
+		out.writeInt(output.length);
 		out.write(output);
 		return output;
 	}
@@ -233,13 +249,19 @@ public class ServerThread extends Thread {
 	public Key getPublicKey(){
 		Key output = null;
 
-		Scanner scan;
 		try {
-			scan = new Scanner(new File(clientUsername));
+			/*scan = new Scanner(new File(clientUsername));
 			scan.useDelimiter(Pattern.compile("\n"));
 	    	String logicalLine = scan.next();
+	    	scan.close();*/
 
-	    	output = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(DatatypeConverter.parseHexBinary(logicalLine)));
+			BufferedReader brTest = new BufferedReader(new FileReader(clientUsername));
+    		String text = brTest.readLine();
+			// Stop. text is the first line.
+
+
+	    	output = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(DatatypeConverter.parseHexBinary(text)));
+	    	brTest.close();
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -249,7 +271,11 @@ public class ServerThread extends Thread {
 		} catch (NoSuchAlgorithmException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
+
 		return output;
 	}
 
