@@ -233,7 +233,7 @@ public class ServerThread extends Thread {
 					System.out.println("DEBUG 1");
 					if (lineParsed[1].equals(_username)){
 						System.out.println("DEBUG 2");
-						output = lineParsed[2].getBytes();
+						output = lineParsed[2].getBytes("UTF-8");
 						break;
 					}
     			}
