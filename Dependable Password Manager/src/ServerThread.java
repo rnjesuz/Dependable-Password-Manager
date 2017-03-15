@@ -1,4 +1,5 @@
 import java.io.BufferedReader;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -31,6 +32,7 @@ public class ServerThread extends Thread {
 
 	private Socket socket = null;
 	private String clientUsername = null;
+	DataOutputStream out;
 
 	public ServerThread(Socket socket) {
 
@@ -45,6 +47,7 @@ public class ServerThread extends Thread {
 
 			try {
 				BufferedReader in = new BufferedReader(new InputStreamReader(this.socket.getInputStream()));
+				out = new DataOutputStream(this.socket.getOutputStream());
 				String input = in.readLine();
 				String[] inputParsed = input.split("#", 0);
 				System.out.println("input test: " + inputParsed[0]);
@@ -71,7 +74,7 @@ public class ServerThread extends Thread {
 
 						break;
 
-					case "get:":
+					case "get":
 						System.out.println(input);
 
 						get(getPublicKey(), inputParsed[1].getBytes(), inputParsed[2].getBytes());
@@ -105,7 +108,8 @@ public class ServerThread extends Thread {
 		FileOutputStream keyfos;
 		try {
 			keyfos = new FileOutputStream(clientUsername);
-			keyfos.write(key.getBytes());			
+			keyfos.write(key.getBytes());
+			keyfos.write('\n');		
 			keyfos.close();
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
@@ -120,13 +124,25 @@ public class ServerThread extends Thread {
 
 	public void put(Key publicKey, byte[] domain, byte[] username, byte[] password) {
 		try {
-			String _domain = new String(domain, StandardCharsets.UTF_8);
-			String _username = new String(username, StandardCharsets.UTF_8);
-			String _password = new String(password, StandardCharsets.UTF_8);
-			List<String> lines = Arrays.asList(_domain.toString() + "|" + _username.toString() + "|" + _password.toString() +'\n');
+			/*String _domain = new String(domain);
+			String _username = new String(username);
+			String _password = new String(password);
+			List<String> lines = Arrays.asList(_domain + "|" + _username + "|" + _password +'\n');
 			Path file = Paths.get(clientUsername);
 			//Files.write(file, lines, Charset.forName("UTF-8"));
-			Files.write(file, lines, StandardOpenOption.APPEND);
+			Files.write(file, lines, StandardOpenOption.APPEND);*/
+			String bar =""+ '|';
+			String newLine = "" + '\n';
+			//String _domain = new String(domain, "UTF-8");
+			//String _username = new String(username, "UTF-8");
+			Path file = Paths.get(clientUsername);
+			Files.write(file, domain, StandardOpenOption.APPEND);
+			Files.write(file, bar.getBytes(), StandardOpenOption.APPEND);
+			Files.write(file, username, StandardOpenOption.APPEND);
+			Files.write(file, bar.getBytes(), StandardOpenOption.APPEND);
+			Files.write(file, password, StandardOpenOption.APPEND);
+			Files.write(file, newLine.getBytes(), StandardOpenOption.APPEND);
+
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -136,16 +152,22 @@ public class ServerThread extends Thread {
 	public byte[] get(Key publicKey, byte[] domain, byte[] username) throws Exception {
 		byte[] output = null;
 		
-		for (String line : Files.readAllLines(Paths.get(publicKey.toString() + ".txt"))) {
+		for (String line : Files.readAllLines(Paths.get(clientUsername))) {
 			String[] lineParsed = line.split("|", 0);
 
 			String _domain = new String(domain, StandardCharsets.UTF_8);
 			String _username = new String(username, StandardCharsets.UTF_8);
+			/*if(Arrays.equals(lineParsed[0].getBytes(), _domain.getBytes()))
+				if(Arrays.equals(lineParsed[1].getBytes(), _username.getBytes()))
+					output = lineParsed[2].getBytes();*/
 			if (lineParsed[0].equals(_domain))
+				System.out.println("DEBUG 1");
 				if (lineParsed[1].equals(_username))
+					System.out.println("DEBUG 2");
 					output = lineParsed[2].getBytes();
 		}
-		
+		out.flush();
+		out.write(output);
 		return output;
 	}
 

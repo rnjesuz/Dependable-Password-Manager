@@ -13,6 +13,7 @@ import javax.crypto.*;
 public class Client {
 
 	DataOutputStream out;
+	BufferedReader in;
 	static Key pubKey;
 	static Key privKey;
 	Socket clientSocket = null;
@@ -24,6 +25,7 @@ public class Client {
 		try {
 			clientSocket = new Socket("localhost", 8080);
 			out = new DataOutputStream(clientSocket.getOutputStream());
+			in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 		} catch (UnknownHostException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
@@ -76,19 +78,32 @@ public class Client {
 					break;
 					
 				case "put":
-					byte[] domain, username, password;
+					String a;
+					byte[] putdomain, putusername, putpassword;
 					System.out.println("Insert the desired domain:");
-					domain = encrypt(System.console().readLine(), pubKey);
+					a = System.console().readLine();
+					putdomain = hashCode(a).getBytes("UTF-8");
+					System.out.println(new String(putdomain, "UTF-8"));
 					System.out.println("Insert the desired username:");
-					username = encrypt(System.console().readLine(), pubKey);
+					a = System.console().readLine();
+					putusername = hashCode(a).getBytes("UTF-8");
 					System.out.println("Insert the desired password:");
-					password = encrypt(System.console().readLine(), pubKey);
+					putpassword = encrypt(System.console().readLine(), pubKey);
 
-					client.save_password(domain, username, password);
+					client.save_password(putdomain, putusername, putpassword);
 					break;
 					
 				case "get":
-				client.Testget();
+					String aa;
+					byte[] getdomain, getusername;
+					System.out.println("Insert the desired domain:");
+					aa = System.console().readLine();
+					getdomain = hashCode(aa).getBytes("UTF-8");
+					System.out.println("Insert the desired username:");
+					aa = System.console().readLine();
+					getusername = hashCode(aa).getBytes("UTF-8");
+
+					client.retrieve_password(getdomain, getusername);
 					break;
 
 				default:
@@ -109,24 +124,6 @@ public class Client {
 		
 	}
 	
-	public void Testput() throws IOException{
-		String TestpubKey = "banana";
-		String Testdomain = "url";
-		String Testusername = "Cena";
-		String Testpassword = "123";
-		out.flush();
-		out.writeBytes("put: " + TestpubKey + Testdomain + Testusername + Testpassword +'\n');
-	}
-	
-	public void Testget() throws IOException{
-		String TestpubKey = "banana";
-		String Testdomain = "url";
-		String Testusername = "Cena";
-		String Testpassword = "123";
-		
-		out.writeBytes("get: ");
-		out.writeBytes(TestpubKey + Testdomain + Testusername + Testpassword);
-	}
 
 	public static void init(KeyStore ks, String username, String password) throws WrongPasswordException {
 		
@@ -244,7 +241,19 @@ public class Client {
     	}
 
     	return new String(dectyptedText);
-  	}	
+  	}
+
+  	//HASH CODE
+  	 public static String hashCode(String str) {
+        int hash = 7;
+		for (int i = 0; i < str.length(); i++) {
+   			 hash = hash*31 + str.charAt(i);
+		}
+		
+		System.out.println("HASH: " + "" + hash);
+        return "" + hash;
+
+    }	
 	
 	public void register_user(){
 		
@@ -264,6 +273,7 @@ public class Client {
 	
 	public void save_password(byte[] domain, byte[] username, byte[] password){
 			try {
+				System.out.println("put#" + domain + "#" + username + "#" + password + "#");
 				out.flush();
 				out.writeBytes("put#" + domain + "#" + username + "#" + password + "#" + '\n');
 			} catch (IOException e) {
@@ -273,8 +283,19 @@ public class Client {
 			
 	}
 	
-	public void retrieve_password(byte[] domain, byte[] username, byte[] password){
-		//Should return password from server
+	public void retrieve_password(byte[] domain, byte[] username){
+		String output = null;
+		try {
+				System.out.println("get#" + domain + "#" + username + "#");
+				out.flush();
+				out.writeBytes("get#" + domain + "#" + username + "#"  + '\n');
+				output = in.readLine();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+		System.out.println(decrypt(output.getBytes(), privKey));
 	}
 	
 }
