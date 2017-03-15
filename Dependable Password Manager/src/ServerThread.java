@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.security.Key;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
@@ -124,7 +125,8 @@ public class ServerThread extends Thread {
 			String _password = new String(password, StandardCharsets.UTF_8);
 			List<String> lines = Arrays.asList(_domain.toString() + "|" + _username.toString() + "|" + _password.toString() +'\n');
 			Path file = Paths.get(clientUsername);
-			Files.write(file, lines, Charset.forName("UTF-8"));
+			//Files.write(file, lines, Charset.forName("UTF-8"));
+			Files.write(file, lines, StandardOpenOption.APPEND);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -157,7 +159,6 @@ public class ServerThread extends Thread {
 			scan.useDelimiter(Pattern.compile("\n"));
 	    	String logicalLine = scan.next();
 
-	    	System.out.println(logicalLine);
 	    	output = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(DatatypeConverter.parseHexBinary(logicalLine)));
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
