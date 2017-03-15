@@ -1,4 +1,5 @@
 import java.io.BufferedReader;
+import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -46,9 +47,16 @@ public class ServerThread extends Thread {
 		while (socket.isConnected()) {
 
 			try {
-				BufferedReader in = new BufferedReader(new InputStreamReader(this.socket.getInputStream()));
+				//BufferedReader in = new BufferedReader(new InputStreamReader(this.socket.getInputStream()));
+				//String input = in.readLine();
 				out = new DataOutputStream(this.socket.getOutputStream());
-				String input = in.readLine();
+				
+				DataInputStream in = new DataInputStream(socket.getInputStream());
+				byte[] inputByte = new byte[in.readInt()]; 
+				in.readFully(inputByte, 0, inputByte.length);
+				String input = new String (inputByte, "UTF-8");
+				
+				
 				String[] inputParsed = input.split("#", 0);
 				System.out.println("input test: " + inputParsed[0]);
 				String command = inputParsed[0];
