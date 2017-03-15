@@ -1,12 +1,17 @@
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.io.Writer;
 import java.net.Socket;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -113,7 +118,6 @@ public class ServerThread extends Thread {
 						in.readFully(inputByte, 0, inputByte.length);
 						putPass = inputByte;
 						
-
 						put(getPublicKey(), putDomain, putUsername, putPass);
 
 						break;
@@ -191,16 +195,24 @@ public class ServerThread extends Thread {
 			//Files.write(file, lines, Charset.forName("UTF-8"));
 			Files.write(file, lines, StandardOpenOption.APPEND);*/
 			String bar =""+ '|';
-			String newLine = "" + '\n';
-			//String _domain = new String(domain, "UTF-8");
-			//String _username = new String(username, "UTF-8");
-			Path file = Paths.get(clientUsername);
+			//String newLine = "" + '\n';
+			String _domain = new String(domain, "UTF-8");
+			String _username = new String(username, "UTF-8");
+			String _password = new String(password, "UTF-8");
+			
+			BufferedWriter bw = new BufferedWriter(new FileWriter(clientUsername, true));
+			
+			bw.write(_domain + bar + _username + bar + _password);
+			bw.newLine();
+			bw.flush();
+			bw.close();
+			/*Path file = Paths.get(clientUsername);
 			Files.write(file, domain, StandardOpenOption.APPEND);
 			Files.write(file, bar.getBytes(), StandardOpenOption.APPEND);
 			Files.write(file, username, StandardOpenOption.APPEND);
 			Files.write(file, bar.getBytes(), StandardOpenOption.APPEND);
 			Files.write(file, password, StandardOpenOption.APPEND);
-			Files.write(file, newLine.getBytes(), StandardOpenOption.APPEND);
+			Files.write(file, newLine.getBytes(), StandardOpenOption.APPEND);*/
 
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -258,7 +270,6 @@ public class ServerThread extends Thread {
 			BufferedReader brTest = new BufferedReader(new FileReader(clientUsername));
     		String text = brTest.readLine();
 			// Stop. text is the first line.
-
 
 	    	output = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(DatatypeConverter.parseHexBinary(text)));
 	    	brTest.close();
