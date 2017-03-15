@@ -52,7 +52,8 @@ public class ServerThread extends Thread {
 				out = new DataOutputStream(this.socket.getOutputStream());
 				
 				DataInputStream in = new DataInputStream(socket.getInputStream());
-				byte[] inputByte = new byte[in.readInt()]; 
+				int lenght = in.readInt();
+				byte[] inputByte = new byte[lenght]; 
 				in.readFully(inputByte, 0, inputByte.length);
 				String input = new String (inputByte, "UTF-8");
 				

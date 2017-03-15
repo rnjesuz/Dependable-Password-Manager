@@ -116,7 +116,9 @@ public class Client {
 	public void sendUsername(){
 		try {
 			out.flush();
-			out.writeBytes("username#" + username + '\n');
+			String message = "username#" + username + '\n';
+			out.writeInt(message.length());
+			out.writeBytes(message);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -261,7 +263,9 @@ public class Client {
             bb.putInt(pubKey.getEncoded().length);
             try {
             	out.flush();
-				out.writeBytes("register#" + username + "#" + '\n');
+            	String message = "register#" + username + "#" + '\n';
+            	out.writeInt(message.length());
+				out.writeBytes(message);
 				clientSocket.getOutputStream().write(bb.array());
 				clientSocket.getOutputStream().write(pubKey.getEncoded());
 				clientSocket.getOutputStream().flush();
@@ -273,9 +277,11 @@ public class Client {
 	
 	public void save_password(byte[] domain, byte[] username, byte[] password){
 			try {
-				System.out.println("put#" + domain + "#" + username + "#" + password + "#");
+				String message = "put#" + domain + "#" + username + "#" + password + "#";
+				System.out.println(message);
 				out.flush();
-				out.writeBytes("put#" + domain + "#" + username + "#" + password + "#" + '\n');
+				out.writeInt(message.length());
+				out.writeBytes(message);
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -286,9 +292,11 @@ public class Client {
 	public void retrieve_password(byte[] domain, byte[] username){
 		String output = null;
 		try {
-				System.out.println("get#" + domain + "#" + username + "#");
+				String message = "get#" + domain + "#" + username + "#";
+				System.out.println(message);
 				out.flush();
-				out.writeBytes("get#" + domain + "#" + username + "#"  + '\n');
+				out.writeInt(message.length());
+				out.writeBytes(message);
 				output = in.readLine();
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
