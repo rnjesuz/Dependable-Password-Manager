@@ -115,10 +115,18 @@ public class Client {
 
 	public void sendUsername(){
 		try {
-			out.flush();
-			String message = "username#" + username + '\n';
+			/*out.flush();
+			String message = "username" + username + '\n';
 			out.writeInt(message.length());
-			out.writeBytes(message);
+			out.writeBytes(message);*/
+			
+			out.flush();
+			out.writeInt("username".length());
+			out.writeBytes("username");
+
+			out.flush();
+			out.writeInt(username.length());
+			out.writeBytes(username);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -262,10 +270,18 @@ public class Client {
 			ByteBuffer bb = ByteBuffer.allocate(4);
             bb.putInt(pubKey.getEncoded().length);
             try {
-            	out.flush();
-            	String message = "register#" + username + "#" + '\n';
+            	/*out.flush();
+            	String message = "register" + username + "#" + '\n';
             	out.writeInt(message.length());
-				out.writeBytes(message);
+				out.writeBytes(message);*/
+				out.flush();
+				out.writeInt("register".length());
+				out.writeBytes("register");
+
+				out.flush();
+				out.writeInt(username.length());
+				out.writeBytes(username);
+
 				clientSocket.getOutputStream().write(bb.array());
 				clientSocket.getOutputStream().write(pubKey.getEncoded());
 				clientSocket.getOutputStream().flush();
@@ -278,13 +294,21 @@ public class Client {
 	public void save_password(byte[] domain, byte[] username, byte[] password){
 			try {
 				out.flush();
+				out.writeInt("put".length());
+				out.writeBytes("put");
 				//String message = "put#" + domain + "#" + username + "#" + password + "#";
 				//System.out.println(message);
 				out.flush();
+				out.writeInt(domain.length);
+				out.write(domain);
 
 				out.flush();
+				out.writeInt(username.length);
+				out.write(username);
 
 				out.flush();
+				out.writeInt(password.length);
+				out.write(password);
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -295,11 +319,25 @@ public class Client {
 	public void retrieve_password(byte[] domain, byte[] username){
 		String output = null;
 		try {
-				String message = "get#" + domain + "#" + username + "#";
+				/*String message = "get#" + domain + "#" + username + "#";
 				System.out.println(message);
 				out.flush();
 				out.writeInt(message.length());
-				out.writeBytes(message);
+				out.writeBytes(message);*/
+
+				out.flush();
+				out.writeInt("get".length());
+				out.writeBytes("get");
+
+				out.flush();
+				out.writeInt(domain.length);
+				out.write(domain);
+
+				out.flush();
+				out.writeInt(username.length);
+				out.write(username);
+
+
 				output = in.readLine();
 			} catch (IOException e) {
 				// TODO Auto-generated catch block

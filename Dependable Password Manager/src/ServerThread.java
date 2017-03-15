@@ -58,35 +58,84 @@ public class ServerThread extends Thread {
 				String input = new String (inputByte, "UTF-8");
 				
 				
-				String[] inputParsed = input.split("#", 0);
-				System.out.println("input test: " + inputParsed[0]);
-				String command = inputParsed[0];
+				//String[] inputParsed = input.split("#", 0);
+				//System.out.println("input test: " + inputParsed[0]);
+				//String command = inputParsed[0];
 
-				switch (command) {
+				switch (input) {
 					case "username":
-						clientUsername = inputParsed[1];
+						System.out.println(input);
+
+						lenght = in.readInt();
+						inputByte = new byte[lenght]; 
+						in.readFully(inputByte, 0, inputByte.length);
+						input = new String (inputByte, "UTF-8");
+						System.out.println("CENASUser " + input);
+						clientUsername = input;
 
 						break;
 
 					case "register":
 						System.out.println(input);
-						clientUsername = inputParsed[1];
+						
+						lenght = in.readInt();
+						inputByte = new byte[lenght]; 
+						in.readFully(inputByte, 0, inputByte.length);
+						input = new String (inputByte, "UTF-8");
+						System.out.println("CENASUser " + input);
+						clientUsername = input;
             			
             			register(receivePublicKey());
 
 						break;
 
 					case "put":
+						byte[] putDomain, putUsername, putPass;
 						System.out.println(input);
 
-						put(getPublicKey(), inputParsed[1].getBytes(), inputParsed[2].getBytes(), inputParsed[3].getBytes());
+						lenght = in.readInt();
+						inputByte = new byte[lenght]; 
+						in.readFully(inputByte, 0, inputByte.length);
+						putDomain = inputByte;
+						input = new String (inputByte, "UTF-8");
+						System.out.println("CENAS" + input);
+						
+						lenght = in.readInt();
+						inputByte = new byte[lenght]; 
+						in.readFully(inputByte, 0, inputByte.length);
+						putUsername = inputByte;
+						input = new String (inputByte, "UTF-8");
+						System.out.println("CENAS" + input);
+						
+						lenght = in.readInt();
+						inputByte = new byte[lenght]; 
+						in.readFully(inputByte, 0, inputByte.length);
+						putPass = inputByte;
+						
+
+						put(getPublicKey(), putDomain, putUsername, putPass);
 
 						break;
 
 					case "get":
+						byte[] getDomain, getUsername;
 						System.out.println(input);
 
-						get(getPublicKey(), inputParsed[1].getBytes(), inputParsed[2].getBytes());
+						lenght = in.readInt();
+						inputByte = new byte[lenght]; 
+						in.readFully(inputByte, 0, inputByte.length);
+						getDomain = inputByte;
+						input = new String (inputByte, "UTF-8");
+						System.out.println("CENAS" + input);
+						
+						lenght = in.readInt();
+						inputByte = new byte[lenght]; 
+						in.readFully(inputByte, 0, inputByte.length);
+						getUsername = inputByte;
+						input = new String (inputByte, "UTF-8");
+						System.out.println("CENAS" + input);
+
+						get(getPublicKey(), getDomain, getUsername);
 						break;
 
 					default:
