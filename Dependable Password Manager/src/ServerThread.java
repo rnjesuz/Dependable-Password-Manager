@@ -198,7 +198,7 @@ public class ServerThread extends Thread {
 	}
 
 	public byte[] get(Key publicKey, byte[] domain, byte[] username) throws Exception {
-		byte[] fail = null;
+		byte[] fail = "NULL".getBytes("UTF-8");
 		
 		String bar =""+ '#';
 		String _domain = new String(domain, "UTF-8");
@@ -223,6 +223,7 @@ public class ServerThread extends Thread {
 		
 		System.out.println("No password stored under this domain/username");
 		out.flush();
+		out.writeInt(fail.length);
 		out.write(fail);
 		return null;	
 	}

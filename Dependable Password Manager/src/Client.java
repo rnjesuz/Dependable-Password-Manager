@@ -114,12 +114,7 @@ public class Client {
 
 
 	public void sendUsername(){
-		try {
-			/*out.flush();
-			String message = "username" + username + '\n';
-			out.writeInt(message.length());
-			out.writeBytes(message);*/
-			
+		try {	
 			out.flush();
 			out.writeInt("username".length());
 			out.writeBytes("username");
@@ -270,10 +265,6 @@ public class Client {
 			ByteBuffer bb = ByteBuffer.allocate(4);
             bb.putInt(pubKey.getEncoded().length);
             try {
-            	/*out.flush();
-            	String message = "register" + username + "#" + '\n';
-            	out.writeInt(message.length());
-				out.writeBytes(message);*/
 				out.flush();
 				out.writeInt("register".length());
 				out.writeBytes("register");
@@ -296,8 +287,7 @@ public class Client {
 				out.flush();
 				out.writeInt("put".length());
 				out.writeBytes("put");
-				//String message = "put#" + domain + "#" + username + "#" + password + "#";
-				//System.out.println(message);
+
 				out.flush();
 				out.writeInt(domain.length);
 				out.write(domain);
@@ -319,11 +309,6 @@ public class Client {
 	public void retrieve_password(byte[] domain, byte[] username){
 		byte[] inputByte = null;
 		try {
-				/*String message = "get#" + domain + "#" + username + "#";
-				System.out.println(message);
-				out.flush();
-				out.writeInt(message.length());
-				out.writeBytes(message);*/
 
 				out.flush();
 				out.writeInt("get".length());
@@ -346,8 +331,15 @@ public class Client {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-
-		System.out.println(decrypt(inputByte, privKey));
+		try {
+			if(new String(inputByte,"UTF-8").equals("NULL")){
+				System.out.println("No password stored under this domain/username");
+			}
+			else{System.out.println(decrypt(inputByte, privKey));}
+		} catch (UnsupportedEncodingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 	
 }
