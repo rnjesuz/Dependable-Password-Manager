@@ -42,8 +42,8 @@ public class ServerThread extends Thread {
 
 	private Socket socket = null;
 	private String clientUsername = null;
-	Key privKey;
-	Key pubKey;
+	static Key privKey;
+	static Key pubKey;
 	DataOutputStream out;
 	int counter = 1;
 

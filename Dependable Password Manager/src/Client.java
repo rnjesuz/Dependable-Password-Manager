@@ -7,9 +7,12 @@ import java.security.*;
 import java.security.cert.CertPath;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.Date;
 
 import javax.crypto.*;
+import javax.xml.bind.DatatypeConverter;
 
 public class Client {
 
@@ -18,6 +21,7 @@ public class Client {
 	int counter;
 	static Key pubKey;
 	static Key privKey;
+	static Key serverPubKey;
 	Socket clientSocket = null;
 	static String username=null;
 	static String password=null;
@@ -58,6 +62,7 @@ public class Client {
 			try {
 				//Specify keystore type in the future
 				ks = KeyStore.getInstance("JKS");
+				serverPubKey = getServerKey();
 				init(ks, username, password);
 				break;
 			} catch (KeyStoreException e1) {
@@ -370,6 +375,33 @@ public class Client {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+	
+	public static Key getServerKey(){
+		Key output = null;
+
+		try {
+				BufferedReader brTest = new BufferedReader(new FileReader("serverPubKey"));
+	    		String text = brTest.readLine();
+
+		    	output = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(DatatypeConverter.parseHexBinary(text)));
+		    	brTest.close();
+	    	
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InvalidKeySpecException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (NoSuchAlgorithmException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		return output;
 	}
 	
 	public int calculateCounter(){
