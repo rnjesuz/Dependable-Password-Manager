@@ -1,5 +1,5 @@
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
@@ -7,19 +7,8 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.PrintWriter;
-import java.io.Writer;
 import java.net.Socket;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyFactory;
@@ -28,14 +17,9 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.Signature;
 import java.security.SignatureException;
-import java.security.Timestamp;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
-import java.util.Scanner;
-import java.util.regex.Pattern;
 
 import javax.xml.bind.DatatypeConverter;
 
@@ -56,22 +40,32 @@ public class ServerThread extends Thread {
 
 		super("MiniServer");
 		this.socket = socket;
+		privKey = getServerKey("priv");
+		privKey = getServerKey("pub");
 
 	}
 
 	public void run() {
+		
 		while (socket.isConnected()) {
-			privKey = getServerKey("priv");
-			privKey = getServerKey("pub");
+			
 
 			try {
 				out = new DataOutputStream(this.socket.getOutputStream());
 				
 				DataInputStream in = new DataInputStream(socket.getInputStream());
+				int msgLenght = in.readInt();
 				int lenght = in.readInt();
 				byte[] inputByte = new byte[lenght]; 
+				byte[] decipherInput;
+				byte[] msg;
+				byte[] sig;
 				in.readFully(inputByte, 0, inputByte.length);
-				String input = new String (inputByte, "UTF-8");
+				decipherInput = decrypt(inputByte, privKey);
+				msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
+				sig = Arrays.copyOfRange(decipherInput, msgLenght, inputByte.length);
+				
+				String input = new String (msg, "UTF-8");
 				
 				int proposedCounter;
 				switch (input) {
@@ -368,7 +362,7 @@ public class ServerThread extends Thread {
 				BufferedReader brTest = new BufferedReader(new FileReader("serverPrivKey"));
 	    		String text = brTest.readLine();
 
-		    	output = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(DatatypeConverter.parseHexBinary(text)));
+		    	output = KeyFactory.getInstance("RSA").generatePrivate(new X509EncodedKeySpec(DatatypeConverter.parseHexBinary(text)));
 		    	brTest.close();
 	    	}
 		} catch (FileNotFoundException e) {
@@ -387,10 +381,8 @@ public class ServerThread extends Thread {
 
 		return output;
 	}
-
-
 	
-  	public static String decrypt(byte[] text, Key key) {
+  	public static byte[] decrypt(byte[] text, Key key) {
 	    byte[] dectyptedText = null;
 	    try {
 	      // get an RSA cipher object and print the provider
@@ -404,7 +396,7 @@ public class ServerThread extends Thread {
 	      ex.printStackTrace();
     	}
 
-    	return new String(dectyptedText);
+    	return dectyptedText;
   	}
   	
   	public static byte[] encrypt(String text, Key key) {
@@ -451,5 +443,21 @@ public class ServerThread extends Thread {
 		return verifies;
   	}
   	
-  	
+  	public byte[] concatenate(byte[] a, byte[] b){
+		byte c[] = null;
+		
+		ByteArrayOutputStream outputStream = new ByteArrayOutputStream( );
+		
+		try {
+			outputStream.write( a );
+			outputStream.write( b );
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		c = outputStream.toByteArray( );
+		
+		return c;
+	}
 }

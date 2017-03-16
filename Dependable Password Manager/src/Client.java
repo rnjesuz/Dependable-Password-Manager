@@ -294,8 +294,11 @@ public class Client {
            
             	
 				out.flush();
-				out.writeInt("register".length());
-				out.writeBytes("register");
+				out.writeInt("register".getBytes("UTF-8").length);//Sends length of msg
+				byte[] msgSign = concatenate("register".getBytes("UTF-8"), signature("register".getBytes("UTF-8")));//creates MSG+SIG
+				byte[] toSend = encrypt(new String (msgSign, "UTF-8"), getServerKey());//Cipher
+				out.writeInt(toSend.length);//Sends total length
+				out.write(toSend);//Sends {MSG+SIG}serverpubkey
 				
 				out.writeInt(calculateCounter());
 
@@ -442,4 +445,21 @@ public class Client {
 		return counter;
 	}
 	
+	public byte[] concatenate(byte[] a, byte[] b){
+		byte c[] = null;
+		
+		ByteArrayOutputStream outputStream = new ByteArrayOutputStream( );
+		
+		try {
+			outputStream.write( a );
+			outputStream.write( b );
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		c = outputStream.toByteArray( );
+		
+		return c;
+	}
 }
