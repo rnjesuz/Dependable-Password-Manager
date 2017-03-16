@@ -419,6 +419,22 @@ public class Client {
 		return signature;
 	}
 	
+
+  	public boolean verigySignature(byte[] sig, byte[] data){
+  		boolean verifies = false;
+	  	try {
+			Signature rsaForVerify = Signature.getInstance("SHA256withRSA");
+			rsaForVerify.initVerify((PublicKey) getServerKey());
+			rsaForVerify.update(data);
+			verifies = rsaForVerify.verify(sig);
+			System.out.println("Signature verifies: " + verifies);
+		} catch (InvalidKeyException | NoSuchAlgorithmException | SignatureException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return verifies;
+  	}
+	
 	public int calculateCounter(){
 		counter += 42;
 

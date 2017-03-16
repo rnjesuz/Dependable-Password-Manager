@@ -24,6 +24,7 @@ import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.Signature;
 import java.security.SignatureException;
@@ -420,6 +421,21 @@ public class ServerThread extends Thread {
   	    return cipherText;
     }
   	
+  	public byte[] signature(byte[] array) {
+		byte[] signature = null;
+		Signature rsaForSign;
+		try {
+			rsaForSign = Signature.getInstance("SHA256withRSA");
+			rsaForSign.initSign((PrivateKey) privKey);
+			rsaForSign.update(array);
+			signature = rsaForSign.sign();
+		} catch (NoSuchAlgorithmException | InvalidKeyException | SignatureException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return signature;
+	}
+  	
   	public boolean verigySignature(byte[] sig, byte[] data){
   		boolean verifies = false;
 	  	try {
@@ -434,4 +450,6 @@ public class ServerThread extends Thread {
 		}
 		return verifies;
   	}
+  	
+  	
 }
