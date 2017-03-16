@@ -202,7 +202,7 @@ public class ServerThread extends Thread {
 			
 			BufferedWriter bw = new BufferedWriter(new FileWriter(clientUsername, true));
 			
-			bw.write(_domain + bar + _username + bar + _password);
+			bw.write(_domain + bar + _username + bar + _password + bar);
 			bw.newLine();
 			bw.flush();
 			bw.close();
