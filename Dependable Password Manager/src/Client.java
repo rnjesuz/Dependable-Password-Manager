@@ -404,6 +404,21 @@ public class Client {
 		return output;
 	}
 	
+	public byte[] signature(byte[] array) {
+		byte[] signature = null;
+		Signature rsaForSign;
+		try {
+			rsaForSign = Signature.getInstance("SHA256withRSA");
+			rsaForSign.initSign((PrivateKey) privKey);
+			rsaForSign.update(array);
+			signature = rsaForSign.sign();
+		} catch (NoSuchAlgorithmException | InvalidKeyException | SignatureException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return signature;
+	}
+	
 	public int calculateCounter(){
 		counter += 42;
 

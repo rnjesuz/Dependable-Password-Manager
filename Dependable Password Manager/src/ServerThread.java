@@ -20,9 +20,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
+import java.security.Signature;
+import java.security.SignatureException;
 import java.security.Timestamp;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
@@ -385,7 +389,6 @@ public class ServerThread extends Thread {
 
 
 	
-	//USES PRIVATE KEY
   	public static String decrypt(byte[] text, Key key) {
 	    byte[] dectyptedText = null;
 	    try {
@@ -403,7 +406,6 @@ public class ServerThread extends Thread {
     	return new String(dectyptedText);
   	}
   	
-  	//USES PUBLIC KEY
   	public static byte[] encrypt(String text, Key key) {
   	    byte[] cipherText = null;
   	    try {
@@ -417,4 +419,19 @@ public class ServerThread extends Thread {
   	    }
   	    return cipherText;
     }
+  	
+  	public boolean verigySignature(byte[] sig, byte[] data){
+  		boolean verifies = false;
+	  	try {
+			Signature rsaForVerify = Signature.getInstance("SHA256withRSA");
+			rsaForVerify.initVerify((PublicKey) getPublicKey());
+			rsaForVerify.update(data);
+			verifies = rsaForVerify.verify(sig);
+			System.out.println("Signature verifies: " + verifies);
+		} catch (InvalidKeyException | NoSuchAlgorithmException | SignatureException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return verifies;
+  	}
 }
