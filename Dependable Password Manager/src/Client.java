@@ -4,6 +4,7 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.security.*;
+import java.security.cert.CertPath;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Date;
@@ -14,6 +15,7 @@ public class Client {
 
 	DataOutputStream out;
 	DataInputStream in;
+	int counter;
 	static Key pubKey;
 	static Key privKey;
 	Socket clientSocket = null;
@@ -34,6 +36,7 @@ public class Client {
 			e1.printStackTrace();
 		} 
 		sendUsername();
+		askServerClock();
 		System.out.println("Ready");
 	}
 
@@ -114,7 +117,8 @@ public class Client {
 
 
 	public void sendUsername(){
-		try {	
+		try {
+			
 			out.flush();
 			out.writeInt("username".length());
 			out.writeBytes("username");
@@ -122,6 +126,21 @@ public class Client {
 			out.flush();
 			out.writeInt(username.length());
 			out.writeBytes(username);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void askServerClock(){
+		
+		try {
+			out.flush();
+			out.writeInt("counter".length());
+			out.writeBytes("counter");
+			
+			counter = in.readInt();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -164,6 +183,7 @@ public class Client {
 	    		| UnrecoverableKeyException | KeyStoreException e) {
 	    	e.printStackTrace();
 	    }
+	    
 	}
 	
 	
@@ -261,13 +281,16 @@ public class Client {
     }	
 	
 	public void register_user(){
-		
+		 try {
 			ByteBuffer bb = ByteBuffer.allocate(4);
             bb.putInt(pubKey.getEncoded().length);
-            try {
+           
+            	
 				out.flush();
 				out.writeInt("register".length());
 				out.writeBytes("register");
+				
+				out.writeInt(calculateCounter());
 
 				out.flush();
 				out.writeInt(username.length());
@@ -284,9 +307,12 @@ public class Client {
 	
 	public void save_password(byte[] domain, byte[] username, byte[] password){
 			try {
+            	
 				out.flush();
 				out.writeInt("put".length());
 				out.writeBytes("put");
+				
+				out.writeInt(calculateCounter());
 
 				out.flush();
 				out.writeInt(domain.length);
@@ -309,10 +335,12 @@ public class Client {
 	public void retrieve_password(byte[] domain, byte[] username){
 		byte[] inputByte = null;
 		try {
-
+        		
 				out.flush();
 				out.writeInt("get".length());
 				out.writeBytes("get");
+				
+				out.writeInt(calculateCounter());
 
 				out.flush();
 				out.writeInt(domain.length);
@@ -340,6 +368,13 @@ public class Client {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+	
+	public int calculateCounter(){
+		counter += 42;
+
+		System.out.println(counter);
+		return counter;
 	}
 	
 }

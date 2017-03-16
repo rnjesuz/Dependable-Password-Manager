@@ -23,9 +23,11 @@ import java.nio.file.StandardOpenOption;
 import java.security.Key;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
+import java.security.Timestamp;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.Scanner;
 import java.util.regex.Pattern;
@@ -41,6 +43,7 @@ public class ServerThread extends Thread {
 	private Socket socket = null;
 	private String clientUsername = null;
 	DataOutputStream out;
+	int counter = 1;
 
 	public ServerThread(Socket socket) {
 
@@ -68,8 +71,14 @@ public class ServerThread extends Thread {
 				//String[] inputParsed = input.split("#", 0);
 				//System.out.println("input test: " + inputParsed[0]);
 				//String command = inputParsed[0];
-
+				int proposedCounter;
 				switch (input) {
+					case "counter":
+
+						System.out.println(counter);
+        				out.writeInt(counter);
+        			break;
+        			
 					case "username":
 						System.out.println(input);
 
@@ -81,67 +90,95 @@ public class ServerThread extends Thread {
 						clientUsername = input;
 
 						break;
+						
+					case "time":
+						sendClock();
+						
+						break;
 
 					case "register":
-						System.out.println(input);
-						
-						lenght = in.readInt();
-						inputByte = new byte[lenght]; 
-						in.readFully(inputByte, 0, inputByte.length);
-						input = new String (inputByte, "UTF-8");
-						System.out.println("CENASUser " + input);
-						clientUsername = input;
-            			
-            			register(receivePublicKey());
+						proposedCounter = in.readInt();
+						System.out.println(proposedCounter);
+						if (calculateCounter() != proposedCounter) {
+							throw new Exception();
+						}
+						else{
+							System.out.println(input);
+							counter = proposedCounter;
+							lenght = in.readInt();
+							inputByte = new byte[lenght]; 
+							in.readFully(inputByte, 0, inputByte.length);
+							input = new String (inputByte, "UTF-8");
+							System.out.println("CENASUser " + input);
+							clientUsername = input;
+	            			
+	            			register(receivePublicKey());
+						}
 
 						break;
 
 					case "put":
-						byte[] putDomain, putUsername, putPass;
-						System.out.println(input);
-
-						lenght = in.readInt();
-						inputByte = new byte[lenght]; 
-						in.readFully(inputByte, 0, inputByte.length);
-						putDomain = inputByte;
-						input = new String (inputByte, "UTF-8");
-						System.out.println("CENAS" + input);
 						
-						lenght = in.readInt();
-						inputByte = new byte[lenght]; 
-						in.readFully(inputByte, 0, inputByte.length);
-						putUsername = inputByte;
-						input = new String (inputByte, "UTF-8");
-						System.out.println("CENAS" + input);
-						
-						lenght = in.readInt();
-						inputByte = new byte[lenght]; 
-						in.readFully(inputByte, 0, inputByte.length);
-						putPass = inputByte;
-						
-						put(getPublicKey(), putDomain, putUsername, putPass);
+						proposedCounter = in.readInt();
+						System.out.println(proposedCounter);
+						if (proposedCounter != calculateCounter()) {
+							throw new Exception();
+						}
+						else{
+							counter = proposedCounter;
+							byte[] putDomain, putUsername, putPass;
+							System.out.println(input);
+	
+							lenght = in.readInt();
+							inputByte = new byte[lenght]; 
+							in.readFully(inputByte, 0, inputByte.length);
+							putDomain = inputByte;
+							input = new String (inputByte, "UTF-8");
+							System.out.println("CENAS" + input);
+							
+							lenght = in.readInt();
+							inputByte = new byte[lenght]; 
+							in.readFully(inputByte, 0, inputByte.length);
+							putUsername = inputByte;
+							input = new String (inputByte, "UTF-8");
+							System.out.println("CENAS" + input);
+							
+							lenght = in.readInt();
+							inputByte = new byte[lenght]; 
+							in.readFully(inputByte, 0, inputByte.length);
+							putPass = inputByte;
+							
+							put(getPublicKey(), putDomain, putUsername, putPass);
+						}
 
 						break;
 
 					case "get":
-						byte[] getDomain, getUsername;
-						System.out.println(input);
-
-						lenght = in.readInt();
-						inputByte = new byte[lenght]; 
-						in.readFully(inputByte, 0, inputByte.length);
-						getDomain = inputByte;
-						input = new String (inputByte, "UTF-8");
-						System.out.println("CENAS" + input);
-						
-						lenght = in.readInt();
-						inputByte = new byte[lenght]; 
-						in.readFully(inputByte, 0, inputByte.length);
-						getUsername = inputByte;
-						input = new String (inputByte, "UTF-8");
-						System.out.println("CENAS" + input);
-
-						get(getPublicKey(), getDomain, getUsername);
+						proposedCounter = in.readInt();
+						System.out.println(proposedCounter);
+						if (proposedCounter != calculateCounter()) {
+							throw new Exception();
+						}
+						else{
+							byte[] getDomain, getUsername;
+							System.out.println(input);
+							counter = proposedCounter;
+							lenght = in.readInt();
+							inputByte = new byte[lenght]; 
+							in.readFully(inputByte, 0, inputByte.length);
+							getDomain = inputByte;
+							input = new String (inputByte, "UTF-8");
+							System.out.println("CENAS" + input);
+							
+							lenght = in.readInt();
+							inputByte = new byte[lenght]; 
+							in.readFully(inputByte, 0, inputByte.length);
+							getUsername = inputByte;
+							input = new String (inputByte, "UTF-8");
+							System.out.println("CENAS" + input);
+	
+							get(getPublicKey(), getDomain, getUsername);
+						}
 						break;
 
 					default:
@@ -293,5 +330,23 @@ public class ServerThread extends Thread {
 			e.printStackTrace();
 		} 	
         return pubKey;
+	}
+
+	public void sendClock(){
+		long actualTime = System.currentTimeMillis();
+
+		
+		try {
+			out.flush();
+			out.writeLong(actualTime);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	public int calculateCounter(){
+		System.out.println(counter);
+		return counter+42;
 	}
 }
