@@ -3,6 +3,7 @@ import java.io.BufferedWriter;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
@@ -157,20 +158,16 @@ public class ServerThread extends Thread {
 	}
 
 	public void register(Key publicKey) {
-		try {
-			File file = new File(clientUsername);
-			if (file.createNewFile()) {
-			} else {
-				System.out.println("User already registered");
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		
+		//dir.mkdir();
+		//File file = new File(clientUsername + File.separator +  "publicKey");
+		File dir = new File(clientUsername);
+		if (dir.mkdir()) {}
+		else { System.out.println("User already registered"); }
+
 		String key = DatatypeConverter.printHexBinary(publicKey.getEncoded());
 		FileOutputStream keyfos;
 		try {
-			keyfos = new FileOutputStream(clientUsername);
+			keyfos = new FileOutputStream(clientUsername + File.separator + "publicKey");
 			keyfos.write(key.getBytes());
 			keyfos.write('\n');		
 			keyfos.close();
@@ -180,39 +177,19 @@ public class ServerThread extends Thread {
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}
-		
-		
+		}	
 	}
 
 	public void put(Key publicKey, byte[] domain, byte[] username, byte[] password) {
 		try {
-			/*String _domain = new String(domain);
-			String _username = new String(username);
-			String _password = new String(password);
-			List<String> lines = Arrays.asList(_domain + "|" + _username + "|" + _password +'\n');
-			Path file = Paths.get(clientUsername);
-			//Files.write(file, lines, Charset.forName("UTF-8"));
-			Files.write(file, lines, StandardOpenOption.APPEND);*/
-			String bar =""+ '|';
-			//String newLine = "" + '\n';
+			String bar =""+ '#';
 			String _domain = new String(domain, "UTF-8");
 			String _username = new String(username, "UTF-8");
-			String _password = new String(password, "UTF-8");
+			String filename = _domain + bar + _username;
 			
-			BufferedWriter bw = new BufferedWriter(new FileWriter(clientUsername, true));
-			
-			bw.write(_domain + bar + _username + bar + _password + bar);
-			bw.newLine();
-			bw.flush();
-			bw.close();
-			/*Path file = Paths.get(clientUsername);
-			Files.write(file, domain, StandardOpenOption.APPEND);
-			Files.write(file, bar.getBytes(), StandardOpenOption.APPEND);
-			Files.write(file, username, StandardOpenOption.APPEND);
-			Files.write(file, bar.getBytes(), StandardOpenOption.APPEND);
-			Files.write(file, password, StandardOpenOption.APPEND);
-			Files.write(file, newLine.getBytes(), StandardOpenOption.APPEND);*/
+			FileOutputStream fos = new FileOutputStream(clientUsername + File.separator + filename);	
+			fos.write(password);
+			fos.close();
 
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -221,40 +198,33 @@ public class ServerThread extends Thread {
 	}
 
 	public byte[] get(Key publicKey, byte[] domain, byte[] username) throws Exception {
-		byte[] output = null;
-		String line;
-		String[] lineParsed;
+		byte[] fail = null;
 		
-		/*for (String line : Files.readAllLines(Paths.get(clientUsername))) {
-			String[] lineParsed = line.split("|", 0);*/
-
-			String _domain = new String(domain, "UTF-8");
-			System.out.println("YO" + _domain);
-			String _username = new String(username, "UTF-8");
-			System.out.println("YO" + _username);
-			/*if(Arrays.equals(lineParsed[0].getBytes(), _domain.getBytes()))
-				if(Arrays.equals(lineParsed[1].getBytes(), _username.getBytes()))
-					output = lineParsed[2].getBytes();*/
-			BufferedReader br = new BufferedReader(new FileReader(clientUsername));
-    		br.readLine();//Ignore first line -> KEY
-
-			while ((line = br.readLine()) != null) {
-    			lineParsed = line.split("\\|", 0);
-    			System.out.println("aii" + lineParsed[0] + " " + lineParsed[1]);
-    			if (lineParsed[0].equals(_domain)){
-					System.out.println("DEBUG 1");
-					if (lineParsed[1].equals(_username)){
-						System.out.println("DEBUG 2");
-						output = lineParsed[2].getBytes("UTF-8");
-						break;
-					}
-    			}
+		String bar =""+ '#';
+		String _domain = new String(domain, "UTF-8");
+		String _username = new String(username, "UTF-8");
+		String filename = _domain + bar + _username;
+		
+		File file = new File(clientUsername + File.separator + filename);
+		File dir = new File(clientUsername);
+		for(File f : dir.listFiles()) {
+			if(f.getName().equalsIgnoreCase(filename)) {
+				FileInputStream fis = new FileInputStream(file);
+				byte[] output = new byte [fis.available()];
+				fis.read(output);
+				fis.close();
+				
+				out.flush();
+				out.writeInt(output.length);
+				out.write(output);
+				return output;
 			}
+		}
 		
+		System.out.println("No password stored under this domain/username");
 		out.flush();
-		out.writeInt(output.length);
-		out.write(output);
-		return output;
+		out.write(fail);
+		return null;	
 	}
 
 
@@ -267,7 +237,7 @@ public class ServerThread extends Thread {
 	    	String logicalLine = scan.next();
 	    	scan.close();*/
 
-			BufferedReader brTest = new BufferedReader(new FileReader(clientUsername));
+			BufferedReader brTest = new BufferedReader(new FileReader(clientUsername + File.separator + "publicKey"));
     		String text = brTest.readLine();
 			// Stop. text is the first line.
 
