@@ -21,6 +21,8 @@ public class Client {
 	Socket clientSocket = null;
 	static String username=null;
 	static String password=null;
+	static String serverKey = "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCjKRQONg0//UpKjC4CPArM69ZniDJFwVe2/bHeOL+cBtMI/jTHajig5hddzSx5MzYgwZXN40KwKfXew958P/0ynh46f61e18EfXlhc23VOgnIJn26d9249MDKGwgow7bz/t7BTAU8I8oa/cjGiUcCrAh7J4rv0BajH6t6zoqGTJQIDAQAB";
+
 	
 	public Client(String username, String password) {
 		

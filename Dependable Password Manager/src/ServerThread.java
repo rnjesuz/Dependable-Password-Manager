@@ -42,6 +42,8 @@ public class ServerThread extends Thread {
 
 	private Socket socket = null;
 	private String clientUsername = null;
+	Key privKey;
+	Key pubKey;
 	DataOutputStream out;
 	int counter = 1;
 
@@ -53,12 +55,11 @@ public class ServerThread extends Thread {
 	}
 
 	public void run() {
-		// Read input and process here
 		while (socket.isConnected()) {
+			privKey = getServerKey("priv");
+			privKey = getServerKey("pub");
 
 			try {
-				//BufferedReader in = new BufferedReader(new InputStreamReader(this.socket.getInputStream()));
-				//String input = in.readLine();
 				out = new DataOutputStream(this.socket.getOutputStream());
 				
 				DataInputStream in = new DataInputStream(socket.getInputStream());
@@ -67,10 +68,6 @@ public class ServerThread extends Thread {
 				in.readFully(inputByte, 0, inputByte.length);
 				String input = new String (inputByte, "UTF-8");
 				
-				
-				//String[] inputParsed = input.split("#", 0);
-				//System.out.println("input test: " + inputParsed[0]);
-				//String command = inputParsed[0];
 				int proposedCounter;
 				switch (input) {
 					case "counter":
@@ -349,4 +346,75 @@ public class ServerThread extends Thread {
 		System.out.println(counter);
 		return counter+42;
 	}
+
+
+	public Key getServerKey(String str){
+		Key output = null;
+
+		try {
+			if(str.equals("pub")){
+				BufferedReader brTest = new BufferedReader(new FileReader("serverPubKey"));
+	    		String text = brTest.readLine();
+
+		    	output = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(DatatypeConverter.parseHexBinary(text)));
+		    	brTest.close();
+	    	}
+	    	else if(str.equals("priv")){
+				BufferedReader brTest = new BufferedReader(new FileReader("serverPrivKey"));
+	    		String text = brTest.readLine();
+
+		    	output = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(DatatypeConverter.parseHexBinary(text)));
+		    	brTest.close();
+	    	}
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InvalidKeySpecException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (NoSuchAlgorithmException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		return output;
+	}
+
+
+	
+	//USES PRIVATE KEY
+  	public static String decrypt(byte[] text, Key key) {
+	    byte[] dectyptedText = null;
+	    try {
+	      // get an RSA cipher object and print the provider
+	      final Cipher cipher = Cipher.getInstance("RSA");
+
+	      // decrypt the text using the private key
+	      cipher.init(Cipher.DECRYPT_MODE, key);
+	      dectyptedText = cipher.doFinal(text);
+
+	    } catch (Exception ex) {
+	      ex.printStackTrace();
+    	}
+
+    	return new String(dectyptedText);
+  	}
+  	
+  	//USES PUBLIC KEY
+  	public static byte[] encrypt(String text, Key key) {
+  	    byte[] cipherText = null;
+  	    try {
+  	      // get an RSA cipher object and print the provider
+  	      final Cipher cipher = Cipher.getInstance("RSA");
+  	      // encrypt the plain text using the public key
+  	      cipher.init(Cipher.ENCRYPT_MODE, key);
+  	      cipherText = cipher.doFinal(text.getBytes());
+  	    } catch (Exception e) {
+  	      e.printStackTrace();
+  	    }
+  	    return cipherText;
+    }
 }
