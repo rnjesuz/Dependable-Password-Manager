@@ -98,7 +98,7 @@ public class Client {
 					a = System.console().readLine();
 					putusername = hashCode(a).getBytes("UTF-8");
 					System.out.println("Insert the desired password:");
-					putpassword = encrypt(System.console().readLine(), pubKey);
+					putpassword = encrypt(System.console().readLine().getBytes("UTF-8"), pubKey);
 
 					client.save_password(putdomain, putusername, putpassword);
 					break;
@@ -129,14 +129,14 @@ public class Client {
 			out.flush();
 			out.writeInt("username".getBytes("UTF-8").length);//Sends length of msg
 			byte[] msgSign = concatenate("username".getBytes("UTF-8"), signature("username".getBytes("UTF-8")));//creates MSG+SIG
-			byte[] toSend = encrypt(new String (msgSign, "UTF-8"), getServerKey());//Cipher
+			byte[] toSend = encrypt(msgSign, getServerKey());//Cipher
 			out.writeInt(toSend.length);//Sends total length
 			out.write(toSend);//Sends {MSG+SIG}serverpubkey
 			
 			out.flush();
 			out.writeInt(username.getBytes("UTF-8").length);//Sends length of msg
-			 msgSign = concatenate(username.getBytes("UTF-8"), signature(username.getBytes("UTF-8")));//creates MSG+SIG
-			 toSend = encrypt(new String (msgSign, "UTF-8"), getServerKey());//Cipher
+			msgSign = concatenate(username.getBytes("UTF-8"), signature(username.getBytes("UTF-8")));//creates MSG+SIG
+			toSend = encrypt(msgSign, getServerKey());//Cipher
 			out.writeInt(toSend.length);//Sends total length
 			out.write(toSend);//Sends {MSG+SIG}serverpubkey
 			
@@ -157,9 +157,14 @@ public class Client {
 	public void askServerClock(){
 		
 		try {
+			
 			out.flush();
-			out.writeInt("counter".length());
-			out.writeBytes("counter");
+			out.writeInt("counter".getBytes("UTF-8").length);//Sends length of msg
+			byte[] msgSign = concatenate("counter".getBytes("UTF-8"), signature("username".getBytes("UTF-8")));//creates MSG+SIG
+			byte[] toSend = encrypt(msgSign, getServerKey());//Cipher
+			out.writeInt(toSend.length);//Sends total length
+			out.write(toSend);//Sends {MSG+SIG}serverpubkey
+			
 			
 			counter = in.readInt();
 		} catch (IOException e) {
@@ -245,7 +250,7 @@ public class Client {
 		KeyPair kp = null;
 		try {
 			kpg = KeyPairGenerator.getInstance("RSA");
-			kpg.initialize(1024);
+			kpg.initialize(2048);
 			kp = kpg.genKeyPair();
 			
 		} catch (NoSuchAlgorithmException e) {
@@ -257,14 +262,14 @@ public class Client {
 	}
 
 	//USES PUBLIC KEY
-	public static byte[] encrypt(String text, Key key) {
+	public static byte[] encrypt(byte[] text, Key key) {
 	    byte[] cipherText = null;
 	    try {
 	      // get an RSA cipher object and print the provider
 	      final Cipher cipher = Cipher.getInstance("RSA");
 	      // encrypt the plain text using the public key
 	      cipher.init(Cipher.ENCRYPT_MODE, key);
-	      cipherText = cipher.doFinal(text.getBytes());
+	      cipherText = cipher.doFinal(text);
 	    } catch (Exception e) {
 	      e.printStackTrace();
 	    }
@@ -303,22 +308,26 @@ public class Client {
 	
 	public void register_user(){
 		 try {
-			ByteBuffer bb = ByteBuffer.allocate(4);
+			ByteBuffer bb = ByteBuffer.allocate(8);
             bb.putInt(pubKey.getEncoded().length);
            
             	
 				out.flush();
 				out.writeInt("register".getBytes("UTF-8").length);//Sends length of msg
 				byte[] msgSign = concatenate("register".getBytes("UTF-8"), signature("register".getBytes("UTF-8")));//creates MSG+SIG
-				byte[] toSend = encrypt(new String (msgSign, "UTF-8"), getServerKey());//Cipher
+				byte[] toSend = encrypt(msgSign, getServerKey());//Cipher
 				out.writeInt(toSend.length);//Sends total length
 				out.write(toSend);//Sends {MSG+SIG}serverpubkey
 				
 				out.writeInt(calculateCounter());
 
 				out.flush();
-				out.writeInt(username.length());
-				out.writeBytes(username);
+				
+				out.writeInt(username.getBytes("UTF-8").length);//Sends length of msg
+				msgSign = concatenate(username.getBytes("UTF-8"), signature(username.getBytes("UTF-8")));//creates MSG+SIG
+				toSend = encrypt(msgSign, getServerKey());//Cipher
+				out.writeInt(toSend.length);//Sends total length
+				out.write(toSend);//Sends {MSG+SIG}serverpubkey
 
 				clientSocket.getOutputStream().write(bb.array());
 				clientSocket.getOutputStream().write(pubKey.getEncoded());
@@ -333,18 +342,31 @@ public class Client {
 			try {
             	
 				out.flush();
-				out.writeInt("put".length());
-				out.writeBytes("put");
+				out.writeInt("put".getBytes("UTF-8").length);//Sends length of msg
+				byte[] msgSign = concatenate("put".getBytes("UTF-8"), signature("put".getBytes("UTF-8")));//creates MSG+SIG
+				byte[] toSend = encrypt(msgSign, getServerKey());//Cipher
+				out.writeInt(toSend.length);//Sends total length
+				out.write(toSend);//Sends {MSG+SIG}serverpubkey
 				
 				out.writeInt(calculateCounter());
 
 				out.flush();
-				out.writeInt(domain.length);
-				out.write(domain);
+				out.writeInt(domain.length);//Sends length of msg
+				msgSign = concatenate(domain, signature(domain));//creates MSG+SIG
+				toSend = encrypt(msgSign, getServerKey());//Cipher
+				out.writeInt(toSend.length);//Sends total length
+				out.write(toSend);//Sends {MSG+SIG}serverpubkey
+				/*out.writeInt(domain.length);
+				out.write(domain);*/
 
 				out.flush();
-				out.writeInt(username.length);
-				out.write(username);
+				out.writeInt(username.length);//Sends length of msg
+				msgSign = concatenate(username, signature(username));//creates MSG+SIG
+				toSend = encrypt(msgSign, getServerKey());//Cipher
+				out.writeInt(toSend.length);//Sends total length
+				out.write(toSend);
+				/*out.writeInt(username.length);
+				out.write(username);*/
 
 				out.flush();
 				out.writeInt(password.length);
@@ -361,18 +383,29 @@ public class Client {
 		try {
         		
 				out.flush();
-				out.writeInt("get".length());
-				out.writeBytes("get");
+				out.writeInt("get".getBytes("UTF-8").length);//Sends length of msg
+				byte[] msgSign = concatenate("get".getBytes("UTF-8"), signature("get".getBytes("UTF-8")));//creates MSG+SIG
+				byte[] toSend = encrypt(msgSign, getServerKey());//Cipher
+				out.writeInt(toSend.length);//Sends total length
+				out.write(toSend);//Sends {MSG+SIG}serverpubkey
 				
 				out.writeInt(calculateCounter());
 
 				out.flush();
-				out.writeInt(domain.length);
-				out.write(domain);
+				out.writeInt(domain.length);//Sends length of msg
+				msgSign = concatenate(domain, signature(domain));//creates MSG+SIG
+				toSend = encrypt(msgSign, getServerKey());//Cipher
+				out.writeInt(toSend.length);//Sends total length
+				out.write(toSend);//Sends {MSG+SIG}serverpubkey
+				/*out.writeInt(domain.length);
+				out.write(domain);*/
 
 				out.flush();
-				out.writeInt(username.length);
-				out.write(username);
+				out.writeInt(username.length);//Sends length of msg
+				msgSign = concatenate(username, signature(username));//creates MSG+SIG
+				toSend = encrypt(msgSign, getServerKey());//Cipher
+				out.writeInt(toSend.length);//Sends total length
+				out.write(toSend);
 
 				int lenght = in.readInt();
 				inputByte = new byte[lenght]; 

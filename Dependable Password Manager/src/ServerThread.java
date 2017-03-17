@@ -58,7 +58,7 @@ public class ServerThread extends Thread {
 				out = new DataOutputStream(this.socket.getOutputStream());
 				
 				DataInputStream in = new DataInputStream(socket.getInputStream());
-				//int msgLenght = in.readInt();
+				int msgLenght = in.readInt();
 				int lenght = in.readInt();
 				byte[] inputByte = new byte[lenght];
 				byte[] decipherInput;
@@ -66,8 +66,8 @@ public class ServerThread extends Thread {
 				byte[] sig;
 				in.readFully(inputByte, 0, lenght);
 				decipherInput = decrypt(inputByte, privKey);
-				msg = Arrays.copyOfRange(decipherInput, 0, lenght);
-				sig = Arrays.copyOfRange(decipherInput, lenght, inputByte.length);
+				msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
+				sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
 				
 				String input = new String (msg, "UTF-8");
 				
@@ -81,11 +81,16 @@ public class ServerThread extends Thread {
         			
 					case "username":
 						System.out.println(input);
-
+						
+						msgLenght = in.readInt();
 						lenght = in.readInt();
-						inputByte = new byte[lenght]; 
-						in.readFully(inputByte, 0, inputByte.length);
-						input = new String (inputByte, "UTF-8");
+						inputByte = new byte[lenght];
+						in.readFully(inputByte, 0, lenght);
+						decipherInput = decrypt(inputByte, privKey);
+						msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
+						sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
+
+						input = new String (msg, "UTF-8");
 						System.out.println("CENASUser " + input);
 						clientUsername = input;
 
@@ -105,12 +110,15 @@ public class ServerThread extends Thread {
 						else{
 							System.out.println(input);
 							counter = proposedCounter;
+							
+							
+							msgLenght = in.readInt();
 							lenght = in.readInt();
-							inputByte = new byte[lenght]; 
-							in.readFully(inputByte, 0, inputByte.length);
-							input = new String (inputByte, "UTF-8");
-							System.out.println("CENASUser " + input);
-							clientUsername = input;
+							inputByte = new byte[lenght];
+							in.readFully(inputByte, 0, lenght);
+							decipherInput = decrypt(inputByte, privKey);
+							msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
+							sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
 	            			
 	            			register(receivePublicKey());
 						}
@@ -129,18 +137,35 @@ public class ServerThread extends Thread {
 							byte[] putDomain, putUsername, putPass;
 							System.out.println(input);
 	
-							lenght = in.readInt();
+							/*lenght = in.readInt();
 							inputByte = new byte[lenght]; 
 							in.readFully(inputByte, 0, inputByte.length);
 							putDomain = inputByte;
 							input = new String (inputByte, "UTF-8");
+							System.out.println("CENAS" + input);*/
+							msgLenght = in.readInt();
+							lenght = in.readInt();
+							inputByte = new byte[lenght];
+							in.readFully(inputByte, 0, lenght);
+							decipherInput = decrypt(inputByte, privKey);
+							msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
+							sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
+							putDomain = msg;
+							input = new String (msg, "UTF-8");
 							System.out.println("CENAS" + input);
 							
-							lenght = in.readInt();
+							/*lenght = in.readInt();
 							inputByte = new byte[lenght]; 
-							in.readFully(inputByte, 0, inputByte.length);
-							putUsername = inputByte;
-							input = new String (inputByte, "UTF-8");
+							in.readFully(inputByte, 0, inputByte.length);*/
+							msgLenght = in.readInt();
+							lenght = in.readInt();
+							inputByte = new byte[lenght];
+							in.readFully(inputByte, 0, lenght);
+							decipherInput = decrypt(inputByte, privKey);
+							msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
+							sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
+							putUsername = msg;
+							input = new String (msg, "UTF-8");
 							System.out.println("CENAS" + input);
 							
 							lenght = in.readInt();
@@ -163,7 +188,7 @@ public class ServerThread extends Thread {
 							byte[] getDomain, getUsername;
 							System.out.println(input);
 							counter = proposedCounter;
-							lenght = in.readInt();
+							/*lenght = in.readInt();
 							inputByte = new byte[lenght]; 
 							in.readFully(inputByte, 0, inputByte.length);
 							getDomain = inputByte;
@@ -175,6 +200,30 @@ public class ServerThread extends Thread {
 							in.readFully(inputByte, 0, inputByte.length);
 							getUsername = inputByte;
 							input = new String (inputByte, "UTF-8");
+							System.out.println("CENAS" + input);*/
+							msgLenght = in.readInt();
+							lenght = in.readInt();
+							inputByte = new byte[lenght];
+							in.readFully(inputByte, 0, lenght);
+							decipherInput = decrypt(inputByte, privKey);
+							msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
+							sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
+							getDomain = msg;
+							input = new String (msg, "UTF-8");
+							System.out.println("CENAS" + input);
+							
+							/*lenght = in.readInt();
+							inputByte = new byte[lenght]; 
+							in.readFully(inputByte, 0, inputByte.length);*/
+							msgLenght = in.readInt();
+							lenght = in.readInt();
+							inputByte = new byte[lenght];
+							in.readFully(inputByte, 0, lenght);
+							decipherInput = decrypt(inputByte, privKey);
+							msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
+							sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
+							getUsername = msg;
+							input = new String (msg, "UTF-8");
 							System.out.println("CENAS" + input);
 	
 							get(getPublicKey(), getDomain, getUsername);
@@ -305,9 +354,9 @@ public class ServerThread extends Thread {
 	public Key receivePublicKey(){
 		Key pubKey = null;
 
-		byte[] lenb = new byte[4];
+		byte[] lenb = new byte[8];
         try {
-			socket.getInputStream().read(lenb,0,4);
+			socket.getInputStream().read(lenb,0,8);
 			
 	        ByteBuffer bb = ByteBuffer.wrap(lenb);
 	        int len = bb.getInt();

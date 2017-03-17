@@ -19,7 +19,7 @@ public class KeyGen {
 		KeyStore ks = null;
 		try {
 			kpg = KeyPairGenerator.getInstance("RSA");
-			kpg.initialize(1024);
+			kpg.initialize(2048);
 			kp = kpg.genKeyPair();
 			String pass = "pass";   
 			ks = KeyStore.getInstance("JKS");
