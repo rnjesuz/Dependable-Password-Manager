@@ -1,0 +1,11 @@
+-To run the project firstly compile the javas.
+-Use the MakeFile (write "make" to compile, "make clean" to clean the compiled files) or "javac *.java".
+-Ignore outputed warnings as they don't change system functionality.
+-Run the KeyGen file with "java KeyGen" to generate new Keys for the Server. Or if nedded to test behaviour with diferent Keys.
+-Run the Server with "java Server".
+-On a diferrent Console run the client with "java Client".
+-For every new client wanted in a simultaneous concorrent use of the server, simply launch as many consoles as needed and run the Client like above.
+-Simply follow the client output to navigate and experience the existing commands.
+-Do register always as the first command if generating a brand new client (aka new username+password combination).
+-Do put/get interchangeably as wanted and simply fololow the instructions outputed on the console.
+-Each executable console will show all the steps performed by the system, in order to show what is happening and the information and security implemented in the protocol.
