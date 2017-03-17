@@ -127,12 +127,26 @@ public class Client {
 		try {
 			
 			out.flush();
+			out.writeInt("username".getBytes("UTF-8").length);//Sends length of msg
+			byte[] msgSign = concatenate("username".getBytes("UTF-8"), signature("username".getBytes("UTF-8")));//creates MSG+SIG
+			byte[] toSend = encrypt(new String (msgSign, "UTF-8"), getServerKey());//Cipher
+			out.writeInt(toSend.length);//Sends total length
+			out.write(toSend);//Sends {MSG+SIG}serverpubkey
+			
+			out.flush();
+			out.writeInt(username.getBytes("UTF-8").length);//Sends length of msg
+			 msgSign = concatenate(username.getBytes("UTF-8"), signature(username.getBytes("UTF-8")));//creates MSG+SIG
+			 toSend = encrypt(new String (msgSign, "UTF-8"), getServerKey());//Cipher
+			out.writeInt(toSend.length);//Sends total length
+			out.write(toSend);//Sends {MSG+SIG}serverpubkey
+			
+			/*out.flush();
 			out.writeInt("username".length());
 			out.writeBytes("username");
 
 			out.flush();
 			out.writeInt(username.length());
-			out.writeBytes(username);
+			out.writeBytes(username);*/
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
