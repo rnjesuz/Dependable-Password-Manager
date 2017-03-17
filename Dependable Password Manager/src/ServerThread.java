@@ -68,20 +68,23 @@ public class ServerThread extends Thread {
 				decipherInput = decrypt(inputByte, privKey);
 				msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
 				sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
+				System.out.println("================================================");
+				System.out.println("RECEIVED MSG: " + new String(inputByte, "UTF-8"));
+				System.out.println("================================================");
+				System.out.println("DECRYPTED MSG: " + new String(msg, "UTF-8"));
+				System.out.println("================================================");
+				System.out.println("SIGNATURE: " + new String(sig, "UTF-8"));
+				System.out.println("================================================");
 				
 				String input = new String (msg, "UTF-8");
 				
 				int proposedCounter;
 				switch (input) {
 					case "counter":
-
-						System.out.println(counter);
         				out.writeInt(counter);
         			break;
         			
-					case "username":
-						System.out.println(input);
-						
+					case "username":						
 						msgLenght = in.readInt();
 						lenght = in.readInt();
 						inputByte = new byte[lenght];
@@ -89,16 +92,21 @@ public class ServerThread extends Thread {
 						decipherInput = decrypt(inputByte, privKey);
 						msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
 						sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
-
 						input = new String (msg, "UTF-8");
-						System.out.println("CENASUser " + input);
 						clientUsername = input;
-
+						
+						System.out.println("================================================");
+						System.out.println("RECEIVED MSG: " + new String(inputByte, "UTF-8"));
+						System.out.println("================================================");
+						System.out.println("DECRYPTED MSG: " + new String(msg, "UTF-8"));
+						System.out.println("================================================");
+						System.out.println("SIGNATURE: " + new String(sig, "UTF-8"));
+						System.out.println("================================================");
+						
 						break;
 						
 					case "time":
 						sendClock();
-						
 						break;
 
 					case "register":
@@ -108,10 +116,8 @@ public class ServerThread extends Thread {
 							throw new Exception();
 						}
 						else{
-							System.out.println(input);
+							//System.out.println(input);
 							counter = proposedCounter;
-							
-							
 							msgLenght = in.readInt();
 							lenght = in.readInt();
 							inputByte = new byte[lenght];
@@ -120,6 +126,14 @@ public class ServerThread extends Thread {
 							msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
 							sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
 	            			
+							System.out.println("================================================");
+							System.out.println("RECEIVED MSG: " + new String(inputByte, "UTF-8"));
+							System.out.println("================================================");
+							System.out.println("DECRYPTED MSG: " + new String(msg, "UTF-8"));
+							System.out.println("================================================");
+							System.out.println("SIGNATURE: " + new String(sig, "UTF-8"));
+							System.out.println("================================================");
+							
 	            			register(receivePublicKey());
 						}
 
@@ -152,7 +166,14 @@ public class ServerThread extends Thread {
 							sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
 							putDomain = msg;
 							input = new String (msg, "UTF-8");
-							System.out.println("CENAS" + input);
+							
+							System.out.println("================================================");
+							System.out.println("RECEIVED MSG: " + new String(inputByte, "UTF-8"));
+							System.out.println("================================================");
+							System.out.println("DECRYPTED MSG: " + new String(msg, "UTF-8"));
+							System.out.println("================================================");
+							System.out.println("SIGNATURE: " + new String(sig, "UTF-8"));
+							System.out.println("================================================");
 							
 							/*lenght = in.readInt();
 							inputByte = new byte[lenght]; 
@@ -166,13 +187,24 @@ public class ServerThread extends Thread {
 							sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
 							putUsername = msg;
 							input = new String (msg, "UTF-8");
-							System.out.println("CENAS" + input);
+							
+							System.out.println("================================================");
+							System.out.println("RECEIVED MSG: " + new String(inputByte, "UTF-8"));
+							System.out.println("================================================");
+							System.out.println("DECRYPTED MSG: " + new String(msg, "UTF-8"));
+							System.out.println("================================================");
+							System.out.println("SIGNATURE: " + new String(sig, "UTF-8"));
+							System.out.println("================================================");
 							
 							lenght = in.readInt();
 							inputByte = new byte[lenght]; 
 							in.readFully(inputByte, 0, inputByte.length);
 							putPass = inputByte;
 							
+							System.out.println("================================================");
+							System.out.println("RECEIVED MSG: " + new String(inputByte, "UTF-8"));
+							System.out.println("================================================");
+
 							put(getPublicKey(), putDomain, putUsername, putPass);
 						}
 
@@ -186,7 +218,7 @@ public class ServerThread extends Thread {
 						}
 						else{
 							byte[] getDomain, getUsername;
-							System.out.println(input);
+							//System.out.println(input);
 							counter = proposedCounter;
 							/*lenght = in.readInt();
 							inputByte = new byte[lenght]; 
@@ -210,7 +242,14 @@ public class ServerThread extends Thread {
 							sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
 							getDomain = msg;
 							input = new String (msg, "UTF-8");
-							System.out.println("CENAS" + input);
+							
+							System.out.println("================================================");
+							System.out.println("RECEIVED MSG: " + new String(inputByte, "UTF-8"));
+							System.out.println("================================================");
+							System.out.println("DECRYPTED MSG: " + new String(msg, "UTF-8"));
+							System.out.println("================================================");
+							System.out.println("SIGNATURE: " + new String(sig, "UTF-8"));
+							System.out.println("================================================");
 							
 							/*lenght = in.readInt();
 							inputByte = new byte[lenght]; 
@@ -224,7 +263,14 @@ public class ServerThread extends Thread {
 							sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
 							getUsername = msg;
 							input = new String (msg, "UTF-8");
-							System.out.println("CENAS" + input);
+							
+							System.out.println("================================================");
+							System.out.println("RECEIVED MSG: " + new String(inputByte, "UTF-8"));
+							System.out.println("================================================");
+							System.out.println("DECRYPTED MSG: " + new String(msg, "UTF-8"));
+							System.out.println("================================================");
+							System.out.println("SIGNATURE: " + new String(sig, "UTF-8"));
+							System.out.println("================================================");
 	
 							get(getPublicKey(), getDomain, getUsername);
 						}
@@ -255,7 +301,10 @@ public class ServerThread extends Thread {
 		try {
 			keyfos = new FileOutputStream(clientUsername + File.separator + "publicKey");
 			keyfos.write(key.getBytes());
-			keyfos.write('\n');		
+			keyfos.write('\n');
+			
+			System.out.println(clientUsername + "Registered");
+			
 			keyfos.close();
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
@@ -273,7 +322,11 @@ public class ServerThread extends Thread {
 			String _username = new String(username, "UTF-8");
 			String filename = _domain + bar + _username;
 			
-			FileOutputStream fos = new FileOutputStream(clientUsername + File.separator + filename);	
+			FileOutputStream fos = new FileOutputStream(clientUsername + File.separator + filename);
+			
+			System.out.println("Saving password with code " + _domain + bar + _username + " for " + clientUsername);
+			System.out.println("PASS:" + new String(password, "UTF-8"));
+			
 			fos.write(password);
 			fos.close();
 
@@ -302,6 +355,8 @@ public class ServerThread extends Thread {
 				
 				out.flush();
 				out.writeInt(output.length);
+				System.out.println("sending password of " + _domain + bar+_username + " to " + clientUsername);
+				System.out.println("PASS:" + new String(output, "UTF-8"));
 				out.write(output);
 				return output;
 			}
@@ -383,10 +438,10 @@ public class ServerThread extends Thread {
 
 	public void sendClock(){
 		long actualTime = System.currentTimeMillis();
-
-		
+		String forprint = "" + actualTime;
 		try {
 			out.flush();
+			System.out.println("Sending time: " + forprint);
 			out.writeLong(actualTime);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
