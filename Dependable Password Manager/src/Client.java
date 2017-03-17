@@ -250,7 +250,7 @@ public class Client {
 		KeyPair kp = null;
 		try {
 			kpg = KeyPairGenerator.getInstance("RSA");
-			kpg.initialize(2048);
+			kpg.initialize(1024);
 			kp = kpg.genKeyPair();
 			
 		} catch (NoSuchAlgorithmException e) {
