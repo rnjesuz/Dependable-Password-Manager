@@ -12,11 +12,15 @@ import java.net.Socket;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyFactory;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.Signature;
 import java.security.SignatureException;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Arrays;
@@ -41,7 +45,7 @@ public class ServerThread extends Thread {
 		super("MiniServer");
 		this.socket = socket;
 		privKey = getServerKey("priv");
-		privKey = getServerKey("pub");
+		pubKey = getServerKey("pub");
 
 	}
 
@@ -54,16 +58,16 @@ public class ServerThread extends Thread {
 				out = new DataOutputStream(this.socket.getOutputStream());
 				
 				DataInputStream in = new DataInputStream(socket.getInputStream());
-				int msgLenght = in.readInt();
+				//int msgLenght = in.readInt();
 				int lenght = in.readInt();
-				byte[] inputByte = new byte[lenght]; 
+				byte[] inputByte = new byte[lenght];
 				byte[] decipherInput;
 				byte[] msg;
 				byte[] sig;
-				in.readFully(inputByte, 0, inputByte.length);
+				in.readFully(inputByte, 0, lenght);
 				decipherInput = decrypt(inputByte, privKey);
-				msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
-				sig = Arrays.copyOfRange(decipherInput, msgLenght, inputByte.length);
+				msg = Arrays.copyOfRange(decipherInput, 0, lenght);
+				sig = Arrays.copyOfRange(decipherInput, lenght, inputByte.length);
 				
 				String input = new String (msg, "UTF-8");
 				
@@ -351,30 +355,49 @@ public class ServerThread extends Thread {
 		Key output = null;
 
 		try {
+			
+			String pass= "pass";
+	    	FileInputStream fis = new java.io.FileInputStream("ServerKeys");
+	    	KeyStore sk = KeyStore.getInstance("JKS");
+	        //gets keystore if it already exists
+	        sk.load(fis, pass.toCharArray());
+	        System.out.println("KeyStore loaded");
+	        
+	        Key serverPriv = sk.getKey("ServerKeys", pass.toCharArray());
+	        Key serverPub = sk.getCertificate("ServerKeys").getPublicKey();			
+			
 			if(str.equals("pub")){
-				BufferedReader brTest = new BufferedReader(new FileReader("serverPubKey"));
-	    		String text = brTest.readLine();
+				/*BufferedReader brTest = new BufferedReader(new FileReader("serverPubKey"));
+	    		String text = brTest.readLine();*/
 
-		    	output = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(DatatypeConverter.parseHexBinary(text)));
-		    	brTest.close();
+		    	//output = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(serverPub.getEncoded()));
+		    	output = serverPub;
+				fis.close();
 	    	}
 	    	else if(str.equals("priv")){
-				BufferedReader brTest = new BufferedReader(new FileReader("serverPrivKey"));
-	    		String text = brTest.readLine();
+				/*BufferedReader brTest = new BufferedReader(new FileReader("serverPrivKey"));
+	    		String text = brTest.readLine();*/
 
-		    	output = KeyFactory.getInstance("RSA").generatePrivate(new X509EncodedKeySpec(DatatypeConverter.parseHexBinary(text)));
-		    	brTest.close();
+		    	//output = KeyFactory.getInstance("RSA").generatePrivate(new X509EncodedKeySpec(serverPriv.getEncoded()));
+		    	output=serverPriv;
+	    		fis.close();
 	    	}
 		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (InvalidKeySpecException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (NoSuchAlgorithmException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (KeyStoreException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (CertificateException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (UnrecoverableKeyException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}

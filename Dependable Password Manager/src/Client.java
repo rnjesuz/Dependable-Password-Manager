@@ -384,22 +384,43 @@ public class Client {
 		Key output = null;
 
 		try {
-				BufferedReader brTest = new BufferedReader(new FileReader("serverPubKey"));
+				/*BufferedReader brTest = new BufferedReader(new FileReader("serverPubKey"));
 	    		String text = brTest.readLine();
 
 		    	output = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(DatatypeConverter.parseHexBinary(text)));
-		    	brTest.close();
+		    	brTest.close();*/
+		    	
+		    	String pass= "pass";
+		    	FileInputStream fis = new java.io.FileInputStream("ServerKeys");
+		    	KeyStore sk = KeyStore.getInstance("JKS");
+		        //gets keystore if it already exists
+		        sk.load(fis, pass.toCharArray());
+		        System.out.println("KeyStore loaded");
+		        
+		        Key serverPriv = sk.getKey("ServerKeys", pass.toCharArray());
+		        Key serverPub = sk.getCertificate("ServerKeys").getPublicKey();
+		        
+		    	//output = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(serverPub.getEncoded()));
+		    	output = serverPub;
+		        fis.close();
+		        
 	    	
 		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (InvalidKeySpecException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (NoSuchAlgorithmException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (CertificateException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (KeyStoreException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (UnrecoverableKeyException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
