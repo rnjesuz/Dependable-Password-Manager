@@ -34,7 +34,7 @@ import javax.crypto.*;
 public class ServerThread extends Thread {
 
 	private Socket socket = null;
-	private String clientUsername = null;
+	private String clientUsername = "";
 	static Key privKey;
 	static Key pubKey;
 	DataOutputStream out;
@@ -53,7 +53,6 @@ public class ServerThread extends Thread {
 		
 		while (socket.isConnected()) {
 			
-
 			try {
 				out = new DataOutputStream(this.socket.getOutputStream());
 				
@@ -120,12 +119,10 @@ public class ServerThread extends Thread {
 
 					case "register":
 						proposedCounter = in.readInt();
-						//System.out.println(proposedCounter);
 						if (calculateCounter() != proposedCounter) {
 							throw new Exception();
 						}
 						else{
-							//System.out.println(input);
 							counter = proposedCounter;
 							msgLenght = in.readInt();
 							lenght = in.readInt();
@@ -155,7 +152,6 @@ public class ServerThread extends Thread {
 					case "put":
 						
 						proposedCounter = in.readInt();
-						//System.out.println(proposedCounter);
 						if (proposedCounter != calculateCounter()) {
 							throw new Exception();
 						}
@@ -164,12 +160,6 @@ public class ServerThread extends Thread {
 							byte[] putDomain, putUsername, putPass;
 							System.out.println(input);
 	
-							/*lenght = in.readInt();
-							inputByte = new byte[lenght]; 
-							in.readFully(inputByte, 0, inputByte.length);
-							putDomain = inputByte;
-							input = new String (inputByte, "UTF-8");
-							System.out.println("CENAS" + input);*/
 							msgLenght = in.readInt();
 							lenght = in.readInt();
 							inputByte = new byte[lenght];
@@ -192,9 +182,6 @@ public class ServerThread extends Thread {
 							System.out.println("################################################");
 							System.out.println("");
 							
-							/*lenght = in.readInt();
-							inputByte = new byte[lenght]; 
-							in.readFully(inputByte, 0, inputByte.length);*/
 							msgLenght = in.readInt();
 							lenght = in.readInt();
 							inputByte = new byte[lenght];
@@ -241,21 +228,8 @@ public class ServerThread extends Thread {
 						}
 						else{
 							byte[] getDomain, getUsername;
-							//System.out.println(input);
 							counter = proposedCounter;
-							/*lenght = in.readInt();
-							inputByte = new byte[lenght]; 
-							in.readFully(inputByte, 0, inputByte.length);
-							getDomain = inputByte;
-							input = new String (inputByte, "UTF-8");
-							System.out.println("CENAS" + input);
-							
-							lenght = in.readInt();
-							inputByte = new byte[lenght]; 
-							in.readFully(inputByte, 0, inputByte.length);
-							getUsername = inputByte;
-							input = new String (inputByte, "UTF-8");
-							System.out.println("CENAS" + input);*/
+		
 							msgLenght = in.readInt();
 							lenght = in.readInt();
 							inputByte = new byte[lenght];
@@ -278,9 +252,6 @@ public class ServerThread extends Thread {
 							System.out.println("################################################");
 							System.out.println("");
 							
-							/*lenght = in.readInt();
-							inputByte = new byte[lenght]; 
-							in.readFully(inputByte, 0, inputByte.length);*/
 							msgLenght = in.readInt();
 							lenght = in.readInt();
 							inputByte = new byte[lenght];
@@ -310,12 +281,10 @@ public class ServerThread extends Thread {
 					default:
 						break;
 				}
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
-				e.printStackTrace();
+				System.out.println("Connection with client " + clientUsername + " severed");
+				return;
 			}
 		}
 	}
@@ -514,19 +483,11 @@ public class ServerThread extends Thread {
 	        Key serverPub = sk.getCertificate("ServerKeys").getPublicKey();			
 			
 			if(str.equals("pub")){
-				/*BufferedReader brTest = new BufferedReader(new FileReader("serverPubKey"));
-	    		String text = brTest.readLine();*/
-
-		    	//output = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(serverPub.getEncoded()));
-		    	output = serverPub;
+				output = serverPub;
 				fis.close();
 	    	}
 	    	else if(str.equals("priv")){
-				/*BufferedReader brTest = new BufferedReader(new FileReader("serverPrivKey"));
-	    		String text = brTest.readLine();*/
-
-		    	//output = KeyFactory.getInstance("RSA").generatePrivate(new X509EncodedKeySpec(serverPriv.getEncoded()));
-		    	output=serverPriv;
+				output=serverPriv;
 	    		fis.close();
 	    	}
 		} catch (FileNotFoundException e) {
