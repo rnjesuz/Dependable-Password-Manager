@@ -67,7 +67,7 @@ public class ServerThread extends Thread {
 				decipherInput = decrypt(inputByte, privKey);
 				msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
 				sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
-				
+
 				System.out.println("################################################");
 				System.out.println("RECEIVED MSG:");
 				System.out.println(new String(inputByte, "UTF-8"));
@@ -96,6 +96,7 @@ public class ServerThread extends Thread {
 						decipherInput = decrypt(inputByte, privKey);
 						msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
 						sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
+						
 						input = new String (msg, "UTF-8");
 						clientUsername = input;
 						
@@ -131,7 +132,7 @@ public class ServerThread extends Thread {
 							decipherInput = decrypt(inputByte, privKey);
 							msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
 							sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
-	            			
+							
 							System.out.println("################################################");
 							System.out.println("RECEIVED MSG:");
 							System.out.println(new String(inputByte, "UTF-8"));
@@ -167,6 +168,12 @@ public class ServerThread extends Thread {
 							decipherInput = decrypt(inputByte, privKey);
 							msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
 							sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
+							
+							if(!verifySignature(sig, msg)) {
+								System.out.println("Signatured not verified");
+								break;
+							}
+							
 							putDomain = msg;
 							input = new String (msg, "UTF-8");
 							
@@ -189,6 +196,12 @@ public class ServerThread extends Thread {
 							decipherInput = decrypt(inputByte, privKey);
 							msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
 							sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
+							
+							if(!verifySignature(sig, msg)) {
+								System.out.println("Signatured not verified");
+								break;
+							}
+							
 							putUsername = msg;
 							input = new String (msg, "UTF-8");
 							
@@ -237,6 +250,12 @@ public class ServerThread extends Thread {
 							decipherInput = decrypt(inputByte, privKey);
 							msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
 							sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
+							
+							if(!verifySignature(sig, msg)) {
+								System.out.println("Signature not verified");
+								break;
+							}
+							
 							getDomain = msg;
 							input = new String (msg, "UTF-8");
 							
@@ -259,6 +278,12 @@ public class ServerThread extends Thread {
 							decipherInput = decrypt(inputByte, privKey);
 							msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
 							sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
+							
+							if(!verifySignature(sig, msg)) {
+								System.out.println("Signatured not verified");
+								break;
+							}
+							
 							getUsername = msg;
 							input = new String (msg, "UTF-8");
 							
@@ -273,6 +298,11 @@ public class ServerThread extends Thread {
 							System.out.println(new String(sig, "UTF-8"));
 							System.out.println("################################################");
 							System.out.println("");
+							
+							if(!verifySignature(sig, msg)) {
+								System.out.println("Signatured not verified");
+								break;
+							}
 	
 							get(getPublicKey(sig), getDomain, getUsername, sig);
 						}
@@ -571,7 +601,7 @@ public class ServerThread extends Thread {
 		return signature;
 	}
   	
-  	public boolean verigySignature(byte[] sig, byte[] data){
+  	public boolean verifySignature(byte[] sig, byte[] data){
   		boolean verifies = false;
 	  	try {
 			Signature rsaForVerify = Signature.getInstance("SHA256withRSA");

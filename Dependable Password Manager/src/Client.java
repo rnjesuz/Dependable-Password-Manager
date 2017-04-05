@@ -556,7 +556,7 @@ public class Client {
 		return signature;
 	}
 
-	public boolean verigySignature(byte[] sig, byte[] data) {
+	public boolean verifySignature(byte[] sig, byte[] data) {
 		boolean verifies = false;
 		try {
 			Signature rsaForVerify = Signature.getInstance("SHA256withRSA");
