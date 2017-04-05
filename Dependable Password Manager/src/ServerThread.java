@@ -144,7 +144,7 @@ public class ServerThread extends Thread {
 							System.out.println("################################################");
 							System.out.println("");
 							
-	            			register(receivePublicKey());
+	            			register(receivePublicKey(), sig);
 						}
 
 						break;
@@ -215,7 +215,7 @@ public class ServerThread extends Thread {
 							System.out.println("################################################");
 							System.out.println("");
 
-							put(getPublicKey(), putDomain, putUsername, putPass);
+							put(getPublicKey(sig), putDomain, putUsername, putPass, sig);
 						}
 
 						break;
@@ -274,7 +274,7 @@ public class ServerThread extends Thread {
 							System.out.println("################################################");
 							System.out.println("");
 	
-							get(getPublicKey(), getDomain, getUsername);
+							get(getPublicKey(sig), getDomain, getUsername, sig);
 						}
 						break;
 
@@ -284,12 +284,13 @@ public class ServerThread extends Thread {
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				System.out.println("Connection with client " + clientUsername + " severed");
+				e.printStackTrace();
 				return;
 			}
 		}
 	}
 
-	public void register(Key publicKey) {
+	public void register(Key publicKey, byte[] signature) {
 		//dir.mkdir();
 		//File file = new File(clientUsername + File.separator +  "publicKey");
 		File dir = new File(clientUsername);
@@ -301,7 +302,7 @@ public class ServerThread extends Thread {
 		try {
 			keyfos = new FileOutputStream(clientUsername + File.separator + "publicKey");
 			keyfos.write(key.getBytes());
-			keyfos.write('\n');
+			keyfos.write(signature);
 			
 			System.out.println("################################################");
 			System.out.println(clientUsername + " Registered");
@@ -318,7 +319,7 @@ public class ServerThread extends Thread {
 		}	
 	}
 
-	public void put(Key publicKey, byte[] domain, byte[] username, byte[] password) {
+	public void put(Key publicKey, byte[] domain, byte[] username, byte[] password, byte[] signature) {
 		try {
 			String bar =""+ '#';
 			String _domain = new String(domain, "UTF-8");
@@ -335,6 +336,7 @@ public class ServerThread extends Thread {
 			System.out.println("");
 			
 			fos.write(password);
+			fos.write(signature);
 			fos.close();
 
 		} catch (IOException e) {
@@ -343,7 +345,7 @@ public class ServerThread extends Thread {
 		}
 	}
 
-	public byte[] get(Key publicKey, byte[] domain, byte[] username) throws Exception {
+	public byte[] get(Key publicKey, byte[] domain, byte[] username, byte[] signature) throws Exception {
 		byte[] fail = "NULL".getBytes("UTF-8");
 		
 		String bar =""+ '#';
@@ -356,7 +358,7 @@ public class ServerThread extends Thread {
 		for(File f : dir.listFiles()) {
 			if(f.getName().equalsIgnoreCase(filename)) {
 				FileInputStream fis = new FileInputStream(file);
-				byte[] output = new byte [fis.available()];
+				byte[] output = new byte [fis.available() - signature.length];
 				fis.read(output);
 				fis.close();
 				
@@ -382,7 +384,7 @@ public class ServerThread extends Thread {
 	}
 
 
-	public Key getPublicKey(){
+	public Key getPublicKey(byte[] signature){
 		Key output = null;
 
 		try {
@@ -390,13 +392,23 @@ public class ServerThread extends Thread {
 			scan.useDelimiter(Pattern.compile("\n"));
 	    	String logicalLine = scan.next();
 	    	scan.close();*/
-
-			BufferedReader brTest = new BufferedReader(new FileReader(clientUsername + File.separator + "publicKey"));
+			
+			File file = new File(clientUsername + File.separator + "publicKey");
+			FileInputStream fis = new FileInputStream(file);
+			byte[] outputbytes = new byte [fis.available() - signature.length];
+			fis.read(outputbytes);
+			
+			String aux = new String(outputbytes, "UTF-8");
+			System.out.println("PUBLIC KEY: " + aux);
+			
+	    	output = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(DatatypeConverter.parseHexBinary(aux)));
+	    	fis.close();
+	    	
+			/*BufferedReader brTest = new BufferedReader(new FileReader(clientUsername + File.separator + "publicKey"));
     		String text = brTest.readLine();
-			// Stop. text is the first line.
 
 	    	output = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(DatatypeConverter.parseHexBinary(text)));
-	    	brTest.close();
+	    	brTest.close();*/
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -563,7 +575,7 @@ public class ServerThread extends Thread {
   		boolean verifies = false;
 	  	try {
 			Signature rsaForVerify = Signature.getInstance("SHA256withRSA");
-			rsaForVerify.initVerify((PublicKey) getPublicKey());
+			rsaForVerify.initVerify((PublicKey) getPublicKey(sig));
 			rsaForVerify.update(data);
 			verifies = rsaForVerify.verify(sig);
 			System.out.println("Signature verifies: " + verifies);
