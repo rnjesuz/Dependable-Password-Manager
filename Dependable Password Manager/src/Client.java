@@ -5,6 +5,8 @@ import java.nio.ByteBuffer;
 import java.security.*;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.Arrays;
+
 import javax.crypto.*;
 
 public class Client {
@@ -262,21 +264,21 @@ public class Client {
 	}
 
 	// USES PRIVATE KEY
-	public static String decrypt(byte[] text, Key key) {
-		byte[] dectyptedText = null;
+	public static byte[] decrypt(byte[] text, Key key) {
+		byte[] decryptedText = null;
 		try {
 			// get an RSA cipher object and print the provider
 			final Cipher cipher = Cipher.getInstance("RSA");
 
 			// decrypt the text using the private key
 			cipher.init(Cipher.DECRYPT_MODE, key);
-			dectyptedText = cipher.doFinal(text);
+			decryptedText = cipher.doFinal(text);
 
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
 
-		return new String(dectyptedText);
+		return decryptedText;
 	}
 
 	// HASH CODE
@@ -471,10 +473,20 @@ public class Client {
 
 			System.out.println("=============================================================");
 			System.out.println("Receiving Password....");
-			int lenght = in.readInt();
-			inputByte = new byte[lenght];
-			in.readFully(inputByte, 0, inputByte.length);
-
+			int passLength = in.readInt();
+			int msgLength = in.readInt();
+			
+			byte[] inputAux = new byte[msgLength];
+			in.readFully(inputAux, 0, inputAux.length);
+			
+			inputByte = Arrays.copyOfRange(inputAux, 0, passLength);
+			byte[] sig = Arrays.copyOfRange(inputAux, passLength, msgLength);
+			
+			if(!verifySignature(sig, inputByte)) {
+				System.out.println("Signature not verified, operation aborted");
+				return;
+			}
+		
 			// output = in.readLine();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -484,7 +496,7 @@ public class Client {
 			if (new String(inputByte, "UTF-8").equals("NULL")) {
 				System.out.println("No password stored under this domain/username");
 			} else {
-				System.out.println("The password you requested: " + decrypt(inputByte, privKey));
+				System.out.println("The password you requested: " + new String(decrypt(inputByte, privKey), "UTF-8"));
 			}
 		} catch (UnsupportedEncodingException e) {
 			// TODO Auto-generated catch block

@@ -24,6 +24,7 @@ import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Arrays;
+import java.util.zip.Deflater;
 
 import javax.xml.bind.DatatypeConverter;
 
@@ -388,16 +389,20 @@ public class ServerThread extends Thread {
 		for(File f : dir.listFiles()) {
 			if(f.getName().equalsIgnoreCase(filename)) {
 				FileInputStream fis = new FileInputStream(file);
-				byte[] output = new byte [fis.available() - signature.length];
-				fis.read(output);
+				byte[] pass = new byte [fis.available() - signature.length];
+				fis.read(pass);
 				fis.close();
 				
+				byte[] sig = signature(pass);				
+				byte[] output = concatenate(pass, sig);
+				
 				out.flush();
+				out.writeInt(pass.length);
 				out.writeInt(output.length);
 				System.out.println("################################################");
 				System.out.println("sending password of " + _domain + bar+_username + " to " + clientUsername);
 				System.out.println("PASS:");
-				System.out.println(new String(output, "UTF-8"));
+				System.out.println(new String(pass, "UTF-8"));
 				System.out.println("################################################");
 				System.out.println("");
 
@@ -572,14 +577,14 @@ public class ServerThread extends Thread {
     	return dectyptedText;
   	}
   	
-  	public static byte[] encrypt(String text, Key key) {
+  	public static byte[] encrypt(byte[] text, Key key) {
   	    byte[] cipherText = null;
   	    try {
   	      // get an RSA cipher object and print the provider
   	      final Cipher cipher = Cipher.getInstance("RSA");
   	      // encrypt the plain text using the public key
   	      cipher.init(Cipher.ENCRYPT_MODE, key);
-  	      cipherText = cipher.doFinal(text.getBytes());
+  	      cipherText = cipher.doFinal(text);
   	    } catch (Exception e) {
   	      e.printStackTrace();
   	    }
