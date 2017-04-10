@@ -8,6 +8,8 @@ import java.security.cert.X509Certificate;
 import java.util.Arrays;
 
 import javax.crypto.*;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
 
 public class Client {
 
@@ -15,6 +17,8 @@ public class Client {
 	DataInputStream in;
 	int counter;
 	static Key pubKey;
+	static SecretKey sessionKey;
+	static IvParameterSpec iv;
 	static Key privKey;
 	static Key serverPubKey;
 	static Socket clientSocket = null;
@@ -133,6 +137,7 @@ public class Client {
 		clientSocket.close();
 	}
 
+	@SuppressWarnings("null")
 	public void sendUsername() throws IOException {
 
 		out.flush();
@@ -152,6 +157,14 @@ public class Client {
 		toSend = encrypt(msgSign, getServerKey());// Cipher
 		out.writeInt(toSend.length);// Sends total length
 		out.write(toSend);// Sends {MSG+SIG}serverpubkey
+		
+		byte[] key = new byte[16];
+		byte[] ivaux = new byte[16];
+		in.readFully(key);
+		in.readFully(ivaux);
+		
+		sessionKey = new SecretKeySpec(key, 0, key.length, "AES"); 
+		iv = new IvParameterSpec(ivaux);
 	}
 
 	public void askServerClock() throws IOException {
@@ -332,7 +345,8 @@ public class Client {
 		System.out.println("Username Sign: " + (new String(msgSign)));
 		System.out.println("Ciphering username, using server public key");
 		System.out.println("=============================================================");
-		toSend = encrypt(msgSign, getServerKey());// Cipher
+		//toSend = encrypt(msgSign, getServerKey());// Cipher
+		toSend = sessionEncrypt(sessionKey, iv , msgSign);
 		System.out.println("Ciphered signed username: " + (new String(toSend)));
 		out.writeInt(toSend.length);// Sends total length
 		out.write(toSend);// Sends {MSG+SIG}serverpubkey
@@ -378,7 +392,8 @@ public class Client {
 			System.out.println("Domain Sign: " + (new String(msgSign)));
 			System.out.println("Ciphering domain, using server public key");
 			System.out.println("=============================================================");
-			toSend = encrypt(msgSign, getServerKey());// Cipher
+			//toSend = encrypt(msgSign, getServerKey());// Cipher
+			toSend = sessionEncrypt(sessionKey, iv , msgSign);
 			System.out.println("Ciphered signed domain: " + (new String(toSend)));
 			out.writeInt(toSend.length);// Sends total length
 			out.write(toSend);// Sends {MSG+SIG}serverpubkey
@@ -395,7 +410,8 @@ public class Client {
 			System.out.println("Username Sign: " + (new String(msgSign)));
 			System.out.println("Ciphering username, using server public key");
 			System.out.println("=============================================================");
-			toSend = encrypt(msgSign, getServerKey());// Cipher
+			//toSend = encrypt(msgSign, getServerKey());// Cipher
+			toSend = sessionEncrypt(sessionKey, iv , msgSign);
 			System.out.println("Ciphered signed username: " + (new String(toSend)));
 			out.writeInt(toSend.length);// Sends total length
 			out.write(toSend);
@@ -448,7 +464,8 @@ public class Client {
 			System.out.println("Domain Sign: " + (new String(msgSign)));
 			System.out.println("Ciphering domain, using server public key");
 			System.out.println("=============================================================");
-			toSend = encrypt(msgSign, getServerKey());// Cipher
+			//toSend = encrypt(msgSign, getServerKey());// Cipher
+			toSend = sessionEncrypt(sessionKey, iv , msgSign);
 			System.out.println("Ciphered signed domain: " + (new String(toSend)));
 			out.writeInt(toSend.length);// Sends total length
 			out.write(toSend);// Sends {MSG+SIG}serverpubkey
@@ -465,7 +482,8 @@ public class Client {
 			System.out.println("Username Sign: " + (new String(msgSign)));
 			System.out.println("Ciphering username, using server public key");
 			System.out.println("=============================================================");
-			toSend = encrypt(msgSign, getServerKey());// Cipher
+			//toSend = encrypt(msgSign, getServerKey());// Cipher
+			toSend = sessionEncrypt(sessionKey, iv , msgSign);
 			System.out.println("Ciphered signed username: " + (new String(toSend)));
 			out.writeInt(toSend.length);// Sends total length
 			out.write(toSend);
@@ -477,17 +495,18 @@ public class Client {
 			int msgLength = in.readInt();
 			
 			byte[] inputAux = new byte[msgLength];
-			in.readFully(inputAux, 0, inputAux.length);
+			byte[] decipherInput;
+			in.readFully(inputAux, 0, msgLength);
+			decipherInput = sessionDecrypt(sessionKey, iv, inputAux);
 			
-			inputByte = Arrays.copyOfRange(inputAux, 0, passLength);
-			byte[] sig = Arrays.copyOfRange(inputAux, passLength, msgLength);
-			
+			inputByte = Arrays.copyOfRange(decipherInput, 0, passLength);
+			byte[] sig = Arrays.copyOfRange(decipherInput, passLength, msgLength);
+			System.out.println("The password you requested: " + new String(decrypt(inputByte, privKey), "UTF-8"));
 			if(!verifySignature(sig, inputByte)) {
 				System.out.println("Signature not verified, operation aborted");
 				return;
 			}
 		
-			// output = in.readLine();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -607,4 +626,42 @@ public class Client {
 
 		return c;
 	}
+	
+	
+	public static byte[] sessionEncrypt(SecretKey skeySpec, IvParameterSpec iv, byte[] value) {
+        try {
+        	SecretKeySpec sk = new SecretKeySpec(skeySpec.getEncoded(),"AES");
+        	
+            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");
+            cipher.init(Cipher.ENCRYPT_MODE, sk, iv);
+
+            byte[] encrypted = cipher.doFinal(value);
+            System.out.println("encrypted string: " + new String(encrypted, "UTF-8"));
+
+            return encrypted;
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+
+        return null;
+    }
+  	
+  	 public static byte[] sessionDecrypt(SecretKey skeySpec, IvParameterSpec iv, byte[] encrypted) {
+         try {
+
+        	 SecretKeySpec sk = new SecretKeySpec(skeySpec.getEncoded(),"AES");
+        	 
+             Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");
+             cipher.init(Cipher.DECRYPT_MODE, sk, iv);
+
+             byte[] original = cipher.doFinal(encrypted);
+
+             return original;
+         } catch (Exception ex) {
+             ex.printStackTrace();
+         }
+
+         return null;
+     }
+  	
 }

@@ -17,6 +17,7 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.SecureRandom;
 import java.security.Signature;
 import java.security.SignatureException;
 import java.security.UnrecoverableKeyException;
@@ -24,17 +25,23 @@ import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.zip.Deflater;
+
 
 import javax.xml.bind.DatatypeConverter;
 
 import java.nio.ByteBuffer;
 
 import javax.crypto.*;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
 
 public class ServerThread extends Thread {
 
 	private Socket socket = null;
+	static SecretKey sessionKey;
+	IvParameterSpec iv;
 	private String clientUsername = "";
 	static Key privKey;
 	static Key pubKey;
@@ -113,6 +120,21 @@ public class ServerThread extends Thread {
 						System.out.println("################################################");
 						System.out.println("");
 						
+						KeyGenerator keyGen = KeyGenerator.getInstance("AES");
+						keyGen.init(128);
+						sessionKey = keyGen.generateKey();
+						
+						 // build the initialization vector (randomly).
+			            SecureRandom random = new SecureRandom();
+			            byte ivaux[] = new byte[16];//generate random 16 byte IV AES is always 16bytes
+			            random.nextBytes(ivaux);
+			            iv = new IvParameterSpec(ivaux);
+						
+						out.write(Base64.getDecoder().decode(Base64.getEncoder().encodeToString(sessionKey.getEncoded())));
+						out.flush();
+						out.write(iv.getIV());
+						out.flush();
+						
 						break;
 						
 					case "time":
@@ -130,7 +152,7 @@ public class ServerThread extends Thread {
 							lenght = in.readInt();
 							inputByte = new byte[lenght];
 							in.readFully(inputByte, 0, lenght);
-							decipherInput = decrypt(inputByte, privKey);
+							decipherInput = sessionDecrypt(sessionKey, iv, inputByte);
 							msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
 							sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
 							
@@ -145,6 +167,7 @@ public class ServerThread extends Thread {
 							System.out.println(new String(sig, "UTF-8"));
 							System.out.println("################################################");
 							System.out.println("");
+							
 							
 	            			register(receivePublicKey(), sig);
 						}
@@ -166,7 +189,8 @@ public class ServerThread extends Thread {
 							lenght = in.readInt();
 							inputByte = new byte[lenght];
 							in.readFully(inputByte, 0, lenght);
-							decipherInput = decrypt(inputByte, privKey);
+							//decipherInput = decrypt(inputByte, privKey);
+							decipherInput = sessionDecrypt(sessionKey, iv, inputByte);
 							msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
 							sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
 							
@@ -194,7 +218,8 @@ public class ServerThread extends Thread {
 							lenght = in.readInt();
 							inputByte = new byte[lenght];
 							in.readFully(inputByte, 0, lenght);
-							decipherInput = decrypt(inputByte, privKey);
+							//decipherInput = decrypt(inputByte, privKey);
+							decipherInput = sessionDecrypt(sessionKey, iv, inputByte);
 							msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
 							sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
 							
@@ -248,7 +273,8 @@ public class ServerThread extends Thread {
 							lenght = in.readInt();
 							inputByte = new byte[lenght];
 							in.readFully(inputByte, 0, lenght);
-							decipherInput = decrypt(inputByte, privKey);
+							//decipherInput = decrypt(inputByte, privKey);
+							decipherInput = sessionDecrypt(sessionKey, iv, inputByte);
 							msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
 							sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
 							
@@ -276,7 +302,8 @@ public class ServerThread extends Thread {
 							lenght = in.readInt();
 							inputByte = new byte[lenght];
 							in.readFully(inputByte, 0, lenght);
-							decipherInput = decrypt(inputByte, privKey);
+							//decipherInput = decrypt(inputByte, privKey);
+							decipherInput = sessionDecrypt(sessionKey, iv, inputByte);
 							msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
 							sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
 							
@@ -394,7 +421,7 @@ public class ServerThread extends Thread {
 				fis.close();
 				
 				byte[] sig = signature(pass);				
-				byte[] output = concatenate(pass, sig);
+				byte[] output = sessionEncrypt(sessionKey, iv , concatenate(pass, sig));
 				
 				out.flush();
 				out.writeInt(pass.length);
@@ -590,6 +617,46 @@ public class ServerThread extends Thread {
   	    }
   	    return cipherText;
     }
+  
+  	
+  	
+  	public static byte[] sessionEncrypt(SecretKey skeySpec, IvParameterSpec iv, byte[] value) {
+        try {
+
+        	SecretKeySpec sk = new SecretKeySpec(skeySpec.getEncoded(),"AES");
+        	
+            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");
+            cipher.init(Cipher.ENCRYPT_MODE, sk, iv);
+
+            byte[] encrypted = cipher.doFinal(value);
+            System.out.println("encrypted string: " + new String(encrypted, "UTF-8"));
+
+            return encrypted;
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+
+        return null;
+    }
+  	
+  	 public static byte[] sessionDecrypt(SecretKey skeySpec, IvParameterSpec iv, byte[] encrypted) {
+         try {
+
+        	 SecretKeySpec sk = new SecretKeySpec(skeySpec.getEncoded(),"AES");
+        	 
+             Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");
+             cipher.init(Cipher.DECRYPT_MODE, sk, iv);
+
+             byte[] original = cipher.doFinal(encrypted);
+
+             return original;
+         } catch (Exception ex) {
+             ex.printStackTrace();
+         }
+
+         return null;
+     }
+  	
   	
   	public byte[] signature(byte[] array) {
 		byte[] signature = null;
