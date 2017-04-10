@@ -500,7 +500,7 @@ public class Client {
 			decipherInput = sessionDecrypt(sessionKey, iv, inputAux);
 			
 			inputByte = Arrays.copyOfRange(decipherInput, 0, passLength);
-			byte[] sig = Arrays.copyOfRange(decipherInput, passLength, msgLength);
+			byte[] sig = Arrays.copyOfRange(decipherInput, passLength, passLength+256);
 			System.out.println("The password you requested: " + new String(decrypt(inputByte, privKey), "UTF-8"));
 			if(!verifySignature(sig, inputByte)) {
 				System.out.println("Signature not verified, operation aborted");
