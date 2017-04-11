@@ -28,7 +28,6 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.zip.Deflater;
 
-
 import javax.xml.bind.DatatypeConverter;
 
 import java.nio.ByteBuffer;
@@ -58,19 +57,109 @@ public class ServerThread extends Thread {
 	}
 
 	public void run() {
-		
-		while (socket.isConnected()) {
-			
-			try {
-				out = new DataOutputStream(this.socket.getOutputStream());
-				
-				DataInputStream in = new DataInputStream(socket.getInputStream());
-				int msgLenght = in.readInt();
-				int lenght = in.readInt();
-				byte[] inputByte = new byte[lenght];
-				byte[] decipherInput;
-				byte[] msg;
-				byte[] sig;
+
+		try {
+			out = new DataOutputStream(this.socket.getOutputStream());
+
+			DataInputStream in = new DataInputStream(socket.getInputStream());
+
+			int msgLenght = in.readInt();
+			int lenght = in.readInt();
+			byte[] inputByte = new byte[lenght];
+			byte[] decipherInput;
+			byte[] msg;
+			byte[] sig;
+			in.readFully(inputByte, 0, lenght);
+			decipherInput = decrypt(inputByte, privKey);
+			msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
+			sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
+
+			System.out.println("################################################");
+			System.out.println("RECEIVED MSG:");
+			System.out.println(new String(inputByte, "UTF-8"));
+			System.out.println("================================================");
+			System.out.println("DECRYPTED MSG:");
+			System.out.println(new String(msg, "UTF-8"));
+			System.out.println("================================================");
+			System.out.println("SIGNATURE:");
+			System.out.println(new String(sig, "UTF-8"));
+			System.out.println("################################################");
+			System.out.println("");
+
+			String input = new String(msg, "UTF-8");
+
+			// checking for username
+			// generating sessionKey
+			msgLenght = in.readInt();
+			lenght = in.readInt();
+			inputByte = new byte[lenght];
+			in.readFully(inputByte, 0, lenght);
+			decipherInput = decrypt(inputByte, privKey);
+			msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
+			sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
+
+			input = new String(msg, "UTF-8");
+			System.out.println("o input e !!!!!!!!" + input);
+			clientUsername = input;
+
+			System.out.println("################################################");
+			System.out.println("RECEIVED MSG:");
+			System.out.println(new String(inputByte, "UTF-8"));
+			System.out.println("================================================");
+			System.out.println("DECRYPTED MSG:");
+			System.out.println(new String(msg, "UTF-8"));
+			System.out.println("================================================");
+			System.out.println("SIGNATURE:");
+			System.out.println(new String(sig, "UTF-8"));
+			System.out.println("################################################");
+			System.out.println("");
+
+			KeyGenerator keyGen = KeyGenerator.getInstance("AES");
+			keyGen.init(128);
+			sessionKey = keyGen.generateKey();
+
+			// build the initialization vector (randomly).
+			SecureRandom random = new SecureRandom();
+			byte ivaux[] = new byte[16];// generate random 16 byte IV AES is
+										// always 16bytes
+			random.nextBytes(ivaux);
+			iv = new IvParameterSpec(ivaux);
+
+			out.write(Base64.getDecoder().decode(Base64.getEncoder().encodeToString(sessionKey.getEncoded())));
+			out.flush();
+			out.write(iv.getIV());
+			out.flush();
+
+			// checking for counter
+			// sending actual counter
+			System.out.println("ayooooooo");
+			msgLenght = in.readInt();
+			lenght = in.readInt();
+			inputByte = new byte[lenght];
+			in.readFully(inputByte, 0, lenght);
+			decipherInput = decrypt(inputByte, privKey);
+			msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
+			sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
+
+			System.out.println("################################################");
+			System.out.println("RECEIVED MSG:");
+			System.out.println(new String(inputByte, "UTF-8"));
+			System.out.println("================================================");
+			System.out.println("DECRYPTED MSG:");
+			System.out.println(new String(msg, "UTF-8"));
+			System.out.println("================================================");
+			System.out.println("SIGNATURE:");
+			System.out.println(new String(sig, "UTF-8"));
+			System.out.println("################################################");
+			System.out.println("");
+
+			input = new String(msg, "UTF-8");
+			out.writeInt(counter);
+			while (socket.isConnected()) {
+				// preparing variables for command requests
+				msgLenght = in.readInt();
+				lenght = in.readInt();
+				inputByte = new byte[lenght];
 				in.readFully(inputByte, 0, lenght);
 				decipherInput = decrypt(inputByte, privKey);
 				msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
@@ -87,27 +176,72 @@ public class ServerThread extends Thread {
 				System.out.println(new String(sig, "UTF-8"));
 				System.out.println("################################################");
 				System.out.println("");
-				
-				String input = new String (msg, "UTF-8");
-				
+
+				input = new String(msg, "UTF-8");
+
 				int proposedCounter;
 				switch (input) {
-					case "counter":
-        				out.writeInt(counter);
-        			break;
-        			
-					case "username":						
+				/*
+				 * case "counter": out.writeInt(counter); break;
+				 */
+
+				/*
+				 * case "username": msgLenght = in.readInt(); lenght =
+				 * in.readInt(); inputByte = new byte[lenght];
+				 * in.readFully(inputByte, 0, lenght); decipherInput =
+				 * decrypt(inputByte, privKey); msg =
+				 * Arrays.copyOfRange(decipherInput, 0, msgLenght); sig =
+				 * Arrays.copyOfRange(decipherInput, msgLenght,
+				 * decipherInput.length);
+				 * 
+				 * input = new String (msg, "UTF-8"); clientUsername = input;
+				 * 
+				 * System.out.println(
+				 * "################################################");
+				 * System.out.println("RECEIVED MSG:"); System.out.println(new
+				 * String(inputByte, "UTF-8")); System.out.println(
+				 * "================================================");
+				 * System.out.println("DECRYPTED MSG:"); System.out.println(new
+				 * String(msg, "UTF-8")); System.out.println(
+				 * "================================================");
+				 * System.out.println("SIGNATURE:"); System.out.println(new
+				 * String(sig, "UTF-8")); System.out.println(
+				 * "################################################");
+				 * System.out.println("");
+				 * 
+				 * KeyGenerator keyGen = KeyGenerator.getInstance("AES");
+				 * keyGen.init(128); sessionKey = keyGen.generateKey();
+				 * 
+				 * // build the initialization vector (randomly). SecureRandom
+				 * random = new SecureRandom(); byte ivaux[] = new
+				 * byte[16];//generate random 16 byte IV AES is always 16bytes
+				 * random.nextBytes(ivaux); iv = new IvParameterSpec(ivaux);
+				 * 
+				 * out.write(Base64.getDecoder().decode(Base64.getEncoder().
+				 * encodeToString(sessionKey.getEncoded()))); out.flush();
+				 * out.write(iv.getIV()); out.flush();
+				 * 
+				 * break;
+				 */
+
+				case "time":
+					sendClock();
+					break;
+
+				case "register":
+					proposedCounter = in.readInt();
+					if (calculateCounter() != proposedCounter) {
+						throw new Exception();
+					} else {
+						counter = proposedCounter;
 						msgLenght = in.readInt();
 						lenght = in.readInt();
 						inputByte = new byte[lenght];
 						in.readFully(inputByte, 0, lenght);
-						decipherInput = decrypt(inputByte, privKey);
+						decipherInput = sessionDecrypt(sessionKey, iv, inputByte);
 						msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
 						sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
-						
-						input = new String (msg, "UTF-8");
-						clientUsername = input;
-						
+
 						System.out.println("################################################");
 						System.out.println("RECEIVED MSG:");
 						System.out.println(new String(inputByte, "UTF-8"));
@@ -119,241 +253,192 @@ public class ServerThread extends Thread {
 						System.out.println(new String(sig, "UTF-8"));
 						System.out.println("################################################");
 						System.out.println("");
-						
-						KeyGenerator keyGen = KeyGenerator.getInstance("AES");
-						keyGen.init(128);
-						sessionKey = keyGen.generateKey();
-						
-						 // build the initialization vector (randomly).
-			            SecureRandom random = new SecureRandom();
-			            byte ivaux[] = new byte[16];//generate random 16 byte IV AES is always 16bytes
-			            random.nextBytes(ivaux);
-			            iv = new IvParameterSpec(ivaux);
-						
-						out.write(Base64.getDecoder().decode(Base64.getEncoder().encodeToString(sessionKey.getEncoded())));
-						out.flush();
-						out.write(iv.getIV());
-						out.flush();
-						
-						break;
-						
-					case "time":
-						sendClock();
-						break;
 
-					case "register":
-						proposedCounter = in.readInt();
-						if (calculateCounter() != proposedCounter) {
-							throw new Exception();
-						}
-						else{
-							counter = proposedCounter;
-							msgLenght = in.readInt();
-							lenght = in.readInt();
-							inputByte = new byte[lenght];
-							in.readFully(inputByte, 0, lenght);
-							decipherInput = sessionDecrypt(sessionKey, iv, inputByte);
-							msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
-							sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
-							
-							System.out.println("################################################");
-							System.out.println("RECEIVED MSG:");
-							System.out.println(new String(inputByte, "UTF-8"));
-							System.out.println("================================================");
-							System.out.println("DECRYPTED MSG:");
-							System.out.println(new String(msg, "UTF-8"));
-							System.out.println("================================================");
-							System.out.println("SIGNATURE:");
-							System.out.println(new String(sig, "UTF-8"));
-							System.out.println("################################################");
-							System.out.println("");
-							
-							
-	            			register(receivePublicKey(), sig);
+						register(receivePublicKey(), sig);
+					}
+
+					break;
+
+				case "put":
+
+					proposedCounter = in.readInt();
+					if (proposedCounter != calculateCounter()) {
+						throw new Exception();
+					} else {
+						counter = proposedCounter;
+						byte[] putDomain, putUsername, putPass;
+						System.out.println(input);
+
+						msgLenght = in.readInt();
+						lenght = in.readInt();
+						inputByte = new byte[lenght];
+						in.readFully(inputByte, 0, lenght);
+						// decipherInput = decrypt(inputByte, privKey);
+						decipherInput = sessionDecrypt(sessionKey, iv, inputByte);
+						msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
+						sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
+
+						if (!verifySignature(sig, msg)) {
+							System.out.println("Signatured not verified");
+							break;
 						}
 
-						break;
+						putDomain = msg;
+						input = new String(msg, "UTF-8");
 
-					case "put":
-						
-						proposedCounter = in.readInt();
-						if (proposedCounter != calculateCounter()) {
-							throw new Exception();
-						}
-						else{
-							counter = proposedCounter;
-							byte[] putDomain, putUsername, putPass;
-							System.out.println(input);
-	
-							msgLenght = in.readInt();
-							lenght = in.readInt();
-							inputByte = new byte[lenght];
-							in.readFully(inputByte, 0, lenght);
-							//decipherInput = decrypt(inputByte, privKey);
-							decipherInput = sessionDecrypt(sessionKey, iv, inputByte);
-							msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
-							sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
-							
-							if(!verifySignature(sig, msg)) {
-								System.out.println("Signatured not verified");
-								break;
-							}
-							
-							putDomain = msg;
-							input = new String (msg, "UTF-8");
-							
-							System.out.println("################################################");
-							System.out.println("RECEIVED MSG:");
-							System.out.println(new String(inputByte, "UTF-8"));
-							System.out.println("================================================");
-							System.out.println("DECRYPTED MSG:");
-							System.out.println(new String(msg, "UTF-8"));
-							System.out.println("================================================");
-							System.out.println("SIGNATURE:");
-							System.out.println(new String(sig, "UTF-8"));
-							System.out.println("################################################");
-							System.out.println("");
-							
-							msgLenght = in.readInt();
-							lenght = in.readInt();
-							inputByte = new byte[lenght];
-							in.readFully(inputByte, 0, lenght);
-							//decipherInput = decrypt(inputByte, privKey);
-							decipherInput = sessionDecrypt(sessionKey, iv, inputByte);
-							msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
-							sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
-							
-							if(!verifySignature(sig, msg)) {
-								System.out.println("Signatured not verified");
-								break;
-							}
-							
-							putUsername = msg;
-							input = new String (msg, "UTF-8");
-							
-							System.out.println("################################################");
-							System.out.println("RECEIVED MSG:");
-							System.out.println(new String(inputByte, "UTF-8"));
-							System.out.println("================================================");
-							System.out.println("DECRYPTED MSG:");
-							System.out.println(new String(msg, "UTF-8"));
-							System.out.println("================================================");
-							System.out.println("SIGNATURE:");
-							System.out.println(new String(sig, "UTF-8"));
-							System.out.println("################################################");
-							System.out.println("");
-							
-							lenght = in.readInt();
-							inputByte = new byte[lenght]; 
-							in.readFully(inputByte, 0, inputByte.length);
-							putPass = inputByte;
-							
-							System.out.println("################################################");
-							System.out.println("RECEIVED PASS:");
-							System.out.println(new String(inputByte, "UTF-8"));
-							System.out.println("################################################");
-							System.out.println("");
+						System.out.println("################################################");
+						System.out.println("RECEIVED MSG:");
+						System.out.println(new String(inputByte, "UTF-8"));
+						System.out.println("================================================");
+						System.out.println("DECRYPTED MSG:");
+						System.out.println(new String(msg, "UTF-8"));
+						System.out.println("================================================");
+						System.out.println("SIGNATURE:");
+						System.out.println(new String(sig, "UTF-8"));
+						System.out.println("################################################");
+						System.out.println("");
 
-							put(getPublicKey(sig), putDomain, putUsername, putPass, sig);
+						msgLenght = in.readInt();
+						lenght = in.readInt();
+						inputByte = new byte[lenght];
+						in.readFully(inputByte, 0, lenght);
+						// decipherInput = decrypt(inputByte, privKey);
+						decipherInput = sessionDecrypt(sessionKey, iv, inputByte);
+						msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
+						sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
+
+						if (!verifySignature(sig, msg)) {
+							System.out.println("Signatured not verified");
+							break;
 						}
 
-						break;
+						putUsername = msg;
+						input = new String(msg, "UTF-8");
 
-					case "get":
-						proposedCounter = in.readInt();
-						//System.out.println(proposedCounter);
-						if (proposedCounter != calculateCounter()) {
-							throw new Exception();
-						}
-						else{
-							byte[] getDomain, getUsername;
-							counter = proposedCounter;
-		
-							msgLenght = in.readInt();
-							lenght = in.readInt();
-							inputByte = new byte[lenght];
-							in.readFully(inputByte, 0, lenght);
-							//decipherInput = decrypt(inputByte, privKey);
-							decipherInput = sessionDecrypt(sessionKey, iv, inputByte);
-							msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
-							sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
-							
-							if(!verifySignature(sig, msg)) {
-								System.out.println("Signature not verified");
-								break;
-							}
-							
-							getDomain = msg;
-							input = new String (msg, "UTF-8");
-							
-							System.out.println("################################################");
-							System.out.println("RECEIVED MSG:");
-							System.out.println(new String(inputByte, "UTF-8"));
-							System.out.println("================================================");
-							System.out.println("DECRYPTED MSG:");
-							System.out.println(new String(msg, "UTF-8"));
-							System.out.println("================================================");
-							System.out.println("SIGNATURE:");
-							System.out.println(new String(sig, "UTF-8"));
-							System.out.println("################################################");
-							System.out.println("");
-							
-							msgLenght = in.readInt();
-							lenght = in.readInt();
-							inputByte = new byte[lenght];
-							in.readFully(inputByte, 0, lenght);
-							//decipherInput = decrypt(inputByte, privKey);
-							decipherInput = sessionDecrypt(sessionKey, iv, inputByte);
-							msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
-							sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
-							
-							if(!verifySignature(sig, msg)) {
-								System.out.println("Signatured not verified");
-								break;
-							}
-							
-							getUsername = msg;
-							input = new String (msg, "UTF-8");
-							
-							System.out.println("################################################");
-							System.out.println("RECEIVED MSG:");
-							System.out.println(new String(inputByte, "UTF-8"));
-							System.out.println("================================================");
-							System.out.println("DECRYPTED MSG:");
-							System.out.println(new String(msg, "UTF-8"));
-							System.out.println("================================================");
-							System.out.println("SIGNATURE:");
-							System.out.println(new String(sig, "UTF-8"));
-							System.out.println("################################################");
-							System.out.println("");
-							
-							if(!verifySignature(sig, msg)) {
-								System.out.println("Signatured not verified");
-								break;
-							}
-	
-							get(getPublicKey(sig), getDomain, getUsername, sig);
-						}
-						break;
+						System.out.println("################################################");
+						System.out.println("RECEIVED MSG:");
+						System.out.println(new String(inputByte, "UTF-8"));
+						System.out.println("================================================");
+						System.out.println("DECRYPTED MSG:");
+						System.out.println(new String(msg, "UTF-8"));
+						System.out.println("================================================");
+						System.out.println("SIGNATURE:");
+						System.out.println(new String(sig, "UTF-8"));
+						System.out.println("################################################");
+						System.out.println("");
 
-					default:
-						break;
+						lenght = in.readInt();
+						inputByte = new byte[lenght];
+						in.readFully(inputByte, 0, inputByte.length);
+						putPass = inputByte;
+
+						System.out.println("################################################");
+						System.out.println("RECEIVED PASS:");
+						System.out.println(new String(inputByte, "UTF-8"));
+						System.out.println("################################################");
+						System.out.println("");
+
+						put(getPublicKey(sig), putDomain, putUsername, putPass, sig);
+					}
+
+					break;
+
+				case "get":
+					proposedCounter = in.readInt();
+					// System.out.println(proposedCounter);
+					if (proposedCounter != calculateCounter()) {
+						throw new Exception();
+					} else {
+						byte[] getDomain, getUsername;
+						counter = proposedCounter;
+
+						msgLenght = in.readInt();
+						lenght = in.readInt();
+						inputByte = new byte[lenght];
+						in.readFully(inputByte, 0, lenght);
+						// decipherInput = decrypt(inputByte, privKey);
+						decipherInput = sessionDecrypt(sessionKey, iv, inputByte);
+						msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
+						sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
+
+						if (!verifySignature(sig, msg)) {
+							System.out.println("Signature not verified");
+							break;
+						}
+
+						getDomain = msg;
+						input = new String(msg, "UTF-8");
+
+						System.out.println("################################################");
+						System.out.println("RECEIVED MSG:");
+						System.out.println(new String(inputByte, "UTF-8"));
+						System.out.println("================================================");
+						System.out.println("DECRYPTED MSG:");
+						System.out.println(new String(msg, "UTF-8"));
+						System.out.println("================================================");
+						System.out.println("SIGNATURE:");
+						System.out.println(new String(sig, "UTF-8"));
+						System.out.println("################################################");
+						System.out.println("");
+
+						msgLenght = in.readInt();
+						lenght = in.readInt();
+						inputByte = new byte[lenght];
+						in.readFully(inputByte, 0, lenght);
+						// decipherInput = decrypt(inputByte, privKey);
+						decipherInput = sessionDecrypt(sessionKey, iv, inputByte);
+						msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
+						sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
+
+						if (!verifySignature(sig, msg)) {
+							System.out.println("Signatured not verified");
+							break;
+						}
+
+						getUsername = msg;
+						input = new String(msg, "UTF-8");
+
+						System.out.println("################################################");
+						System.out.println("RECEIVED MSG:");
+						System.out.println(new String(inputByte, "UTF-8"));
+						System.out.println("================================================");
+						System.out.println("DECRYPTED MSG:");
+						System.out.println(new String(msg, "UTF-8"));
+						System.out.println("================================================");
+						System.out.println("SIGNATURE:");
+						System.out.println(new String(sig, "UTF-8"));
+						System.out.println("################################################");
+						System.out.println("");
+
+						if (!verifySignature(sig, msg)) {
+							System.out.println("Signatured not verified");
+							break;
+						}
+
+						get(getPublicKey(sig), getDomain, getUsername, sig);
+					}
+					break;
+
+				default:
+					break;
 				}
-			} catch (Exception e) {
-				// TODO Auto-generated catch block
-				System.out.println("Connection with client " + clientUsername + " severed");
-				e.printStackTrace();
-				return;
 			}
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			System.out.println("Connection with client " + clientUsername + " severed");
+			e.printStackTrace();
+			return;
 		}
 	}
 
 	public void register(Key publicKey, byte[] signature) {
-		//dir.mkdir();
-		//File file = new File(clientUsername + File.separator +  "publicKey");
+		// dir.mkdir();
+		// File file = new File(clientUsername + File.separator + "publicKey");
 		File dir = new File(clientUsername);
-		if (dir.mkdir()) {}
-		else { System.out.println("User already registered"); }
+		if (dir.mkdir()) {
+		} else {
+			System.out.println("User already registered");
+		}
 
 		String key = DatatypeConverter.printHexBinary(publicKey.getEncoded());
 		FileOutputStream keyfos;
@@ -361,12 +446,12 @@ public class ServerThread extends Thread {
 			keyfos = new FileOutputStream(clientUsername + File.separator + "publicKey");
 			keyfos.write(key.getBytes());
 			keyfos.write(signature);
-			
+
 			System.out.println("################################################");
 			System.out.println(clientUsername + " Registered");
 			System.out.println("################################################");
 			System.out.println("");
-			
+
 			keyfos.close();
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
@@ -374,25 +459,25 @@ public class ServerThread extends Thread {
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}	
+		}
 	}
 
 	public void put(Key publicKey, byte[] domain, byte[] username, byte[] password, byte[] signature) {
 		try {
-			String bar =""+ '#';
+			String bar = "" + '#';
 			String _domain = new String(domain, "UTF-8");
 			String _username = new String(username, "UTF-8");
 			String filename = _domain + bar + _username;
-			
+
 			FileOutputStream fos = new FileOutputStream(clientUsername + File.separator + filename);
-			
+
 			System.out.println("################################################");
 			System.out.println("Saving password with code " + _domain + bar + _username + " for " + clientUsername);
 			System.out.println("PASS:");
 			System.out.println(new String(password, "UTF-8"));
 			System.out.println("################################################");
 			System.out.println("");
-			
+
 			fos.write(password);
 			fos.write(signature);
 			fos.close();
@@ -405,29 +490,29 @@ public class ServerThread extends Thread {
 
 	public byte[] get(Key publicKey, byte[] domain, byte[] username, byte[] signature) throws Exception {
 		byte[] fail = "NULL".getBytes("UTF-8");
-		
-		String bar =""+ '#';
+
+		String bar = "" + '#';
 		String _domain = new String(domain, "UTF-8");
 		String _username = new String(username, "UTF-8");
 		String filename = _domain + bar + _username;
-		
+
 		File file = new File(clientUsername + File.separator + filename);
 		File dir = new File(clientUsername);
-		for(File f : dir.listFiles()) {
-			if(f.getName().equalsIgnoreCase(filename)) {
+		for (File f : dir.listFiles()) {
+			if (f.getName().equalsIgnoreCase(filename)) {
 				FileInputStream fis = new FileInputStream(file);
-				byte[] pass = new byte [fis.available() - signature.length];
+				byte[] pass = new byte[fis.available() - signature.length];
 				fis.read(pass);
 				fis.close();
-				
-				byte[] sig = signature(pass);				
-				byte[] output = sessionEncrypt(sessionKey, iv , concatenate(pass, sig));
-				
+
+				byte[] sig = signature(pass);
+				byte[] output = sessionEncrypt(sessionKey, iv, concatenate(pass, sig));
+
 				out.flush();
 				out.writeInt(pass.length);
 				out.writeInt(output.length);
 				System.out.println("################################################");
-				System.out.println("sending password of " + _domain + bar+_username + " to " + clientUsername);
+				System.out.println("sending password of " + _domain + bar + _username + " to " + clientUsername);
 				System.out.println("PASS:");
 				System.out.println(new String(pass, "UTF-8"));
 				System.out.println("################################################");
@@ -437,40 +522,45 @@ public class ServerThread extends Thread {
 				return output;
 			}
 		}
-		
+
 		System.out.println("No password stored under this domain/username");
 		out.flush();
 		out.writeInt(fail.length);
 		out.write(fail);
-		return null;	
+		return null;
 	}
 
-
-	public Key getPublicKey(byte[] signature){
+	public Key getPublicKey(byte[] signature) {
 		Key output = null;
 
 		try {
-			/*scan = new Scanner(new File(clientUsername));
-			scan.useDelimiter(Pattern.compile("\n"));
-	    	String logicalLine = scan.next();
-	    	scan.close();*/
-			
+			/*
+			 * scan = new Scanner(new File(clientUsername));
+			 * scan.useDelimiter(Pattern.compile("\n")); String logicalLine =
+			 * scan.next(); scan.close();
+			 */
+
 			File file = new File(clientUsername + File.separator + "publicKey");
 			FileInputStream fis = new FileInputStream(file);
-			byte[] outputbytes = new byte [fis.available() - signature.length];
+			byte[] outputbytes = new byte[fis.available() - signature.length];
 			fis.read(outputbytes);
-			
+
 			String aux = new String(outputbytes, "UTF-8");
 			System.out.println("PUBLIC KEY: " + aux);
-			
-	    	output = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(DatatypeConverter.parseHexBinary(aux)));
-	    	fis.close();
-	    	
-			/*BufferedReader brTest = new BufferedReader(new FileReader(clientUsername + File.separator + "publicKey"));
-    		String text = brTest.readLine();
 
-	    	output = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(DatatypeConverter.parseHexBinary(text)));
-	    	brTest.close();*/
+			output = KeyFactory.getInstance("RSA")
+					.generatePublic(new X509EncodedKeySpec(DatatypeConverter.parseHexBinary(aux)));
+			fis.close();
+
+			/*
+			 * BufferedReader brTest = new BufferedReader(new
+			 * FileReader(clientUsername + File.separator + "publicKey"));
+			 * String text = brTest.readLine();
+			 * 
+			 * output = KeyFactory.getInstance("RSA").generatePublic(new
+			 * X509EncodedKeySpec(DatatypeConverter.parseHexBinary(text)));
+			 * brTest.close();
+			 */
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -489,27 +579,27 @@ public class ServerThread extends Thread {
 	}
 
 	/*
-	* Auxiliary function to read and convert the public key
-	*
-	*/
-	public Key receivePublicKey(){
+	 * Auxiliary function to read and convert the public key
+	 *
+	 */
+	public Key receivePublicKey() {
 		Key pubKey = null;
 
 		byte[] lenb = new byte[8];
-        try {
-			socket.getInputStream().read(lenb,0,8);
-			
-	        ByteBuffer bb = ByteBuffer.wrap(lenb);
-	        int len = bb.getInt();
+		try {
+			socket.getInputStream().read(lenb, 0, 8);
 
-	        byte[] pubKeyBytes = new byte[len];
-	        socket.getInputStream().read(pubKeyBytes);
-	        X509EncodedKeySpec ks = new X509EncodedKeySpec(pubKeyBytes);
-	            			
-	        KeyFactory kf = KeyFactory.getInstance("RSA");
-	        pubKey = kf.generatePublic(ks);  			
-       
-        } catch (IOException e) {
+			ByteBuffer bb = ByteBuffer.wrap(lenb);
+			int len = bb.getInt();
+
+			byte[] pubKeyBytes = new byte[len];
+			socket.getInputStream().read(pubKeyBytes);
+			X509EncodedKeySpec ks = new X509EncodedKeySpec(pubKeyBytes);
+
+			KeyFactory kf = KeyFactory.getInstance("RSA");
+			pubKey = kf.generatePublic(ks);
+
+		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (NoSuchAlgorithmException e) {
@@ -518,11 +608,11 @@ public class ServerThread extends Thread {
 		} catch (InvalidKeySpecException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		} 	
-        return pubKey;
+		}
+		return pubKey;
 	}
 
-	public void sendClock(){
+	public void sendClock() {
 		long actualTime = System.currentTimeMillis();
 		String forprint = "" + actualTime;
 		try {
@@ -534,36 +624,34 @@ public class ServerThread extends Thread {
 			e.printStackTrace();
 		}
 	}
-	
-	public int calculateCounter(){
-		//System.out.println(counter);
-		return counter+42;
+
+	public int calculateCounter() {
+		// System.out.println(counter);
+		return counter + 42;
 	}
 
-
-	public Key getServerKey(String str){
+	public Key getServerKey(String str) {
 		Key output = null;
 
 		try {
-			
-			String pass= "pass";
-	    	FileInputStream fis = new java.io.FileInputStream("ServerKeys");
-	    	KeyStore sk = KeyStore.getInstance("JKS");
-	        //gets keystore if it already exists
-	        sk.load(fis, pass.toCharArray());
-	        System.out.println("KeyStore loaded");
-	        
-	        Key serverPriv = sk.getKey("ServerKeys", pass.toCharArray());
-	        Key serverPub = sk.getCertificate("ServerKeys").getPublicKey();			
-			
-			if(str.equals("pub")){
+
+			String pass = "pass";
+			FileInputStream fis = new java.io.FileInputStream("ServerKeys");
+			KeyStore sk = KeyStore.getInstance("JKS");
+			// gets keystore if it already exists
+			sk.load(fis, pass.toCharArray());
+			System.out.println("KeyStore loaded");
+
+			Key serverPriv = sk.getKey("ServerKeys", pass.toCharArray());
+			Key serverPub = sk.getCertificate("ServerKeys").getPublicKey();
+
+			if (str.equals("pub")) {
 				output = serverPub;
 				fis.close();
-	    	}
-	    	else if(str.equals("priv")){
-				output=serverPriv;
-	    		fis.close();
-	    	}
+			} else if (str.equals("priv")) {
+				output = serverPriv;
+				fis.close();
+			}
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -586,79 +674,76 @@ public class ServerThread extends Thread {
 
 		return output;
 	}
-	
-  	public static byte[] decrypt(byte[] text, Key key) {
-	    byte[] dectyptedText = null;
-	    try {
-	      // get an RSA cipher object and print the provider
-	      final Cipher cipher = Cipher.getInstance("RSA");
 
-	      // decrypt the text using the private key
-	      cipher.init(Cipher.DECRYPT_MODE, key);
-	      dectyptedText = cipher.doFinal(text);
+	public static byte[] decrypt(byte[] text, Key key) {
+		byte[] dectyptedText = null;
+		try {
+			// get an RSA cipher object and print the provider
+			final Cipher cipher = Cipher.getInstance("RSA");
 
-	    } catch (Exception ex) {
-	      ex.printStackTrace();
-    	}
+			// decrypt the text using the private key
+			cipher.init(Cipher.DECRYPT_MODE, key);
+			dectyptedText = cipher.doFinal(text);
 
-    	return dectyptedText;
-  	}
-  	
-  	public static byte[] encrypt(byte[] text, Key key) {
-  	    byte[] cipherText = null;
-  	    try {
-  	      // get an RSA cipher object and print the provider
-  	      final Cipher cipher = Cipher.getInstance("RSA");
-  	      // encrypt the plain text using the public key
-  	      cipher.init(Cipher.ENCRYPT_MODE, key);
-  	      cipherText = cipher.doFinal(text);
-  	    } catch (Exception e) {
-  	      e.printStackTrace();
-  	    }
-  	    return cipherText;
-    }
-  
-  	
-  	
-  	public static byte[] sessionEncrypt(SecretKey skeySpec, IvParameterSpec iv, byte[] value) {
-        try {
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
 
-        	SecretKeySpec sk = new SecretKeySpec(skeySpec.getEncoded(),"AES");
-        	
-            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");
-            cipher.init(Cipher.ENCRYPT_MODE, sk, iv);
+		return dectyptedText;
+	}
 
-            byte[] encrypted = cipher.doFinal(value);
-            System.out.println("encrypted string: " + new String(encrypted, "UTF-8"));
+	public static byte[] encrypt(byte[] text, Key key) {
+		byte[] cipherText = null;
+		try {
+			// get an RSA cipher object and print the provider
+			final Cipher cipher = Cipher.getInstance("RSA");
+			// encrypt the plain text using the public key
+			cipher.init(Cipher.ENCRYPT_MODE, key);
+			cipherText = cipher.doFinal(text);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return cipherText;
+	}
 
-            return encrypted;
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
+	public static byte[] sessionEncrypt(SecretKey skeySpec, IvParameterSpec iv, byte[] value) {
+		try {
 
-        return null;
-    }
-  	
-  	 public static byte[] sessionDecrypt(SecretKey skeySpec, IvParameterSpec iv, byte[] encrypted) {
-         try {
+			SecretKeySpec sk = new SecretKeySpec(skeySpec.getEncoded(), "AES");
 
-        	 SecretKeySpec sk = new SecretKeySpec(skeySpec.getEncoded(),"AES");
-        	 
-             Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");
-             cipher.init(Cipher.DECRYPT_MODE, sk, iv);
+			Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");
+			cipher.init(Cipher.ENCRYPT_MODE, sk, iv);
 
-             byte[] original = cipher.doFinal(encrypted);
+			byte[] encrypted = cipher.doFinal(value);
+			System.out.println("encrypted string: " + new String(encrypted, "UTF-8"));
 
-             return original;
-         } catch (Exception ex) {
-             ex.printStackTrace();
-         }
+			return encrypted;
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
 
-         return null;
-     }
-  	
-  	
-  	public byte[] signature(byte[] array) {
+		return null;
+	}
+
+	public static byte[] sessionDecrypt(SecretKey skeySpec, IvParameterSpec iv, byte[] encrypted) {
+		try {
+
+			SecretKeySpec sk = new SecretKeySpec(skeySpec.getEncoded(), "AES");
+
+			Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");
+			cipher.init(Cipher.DECRYPT_MODE, sk, iv);
+
+			byte[] original = cipher.doFinal(encrypted);
+
+			return original;
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+
+		return null;
+	}
+
+	public byte[] signature(byte[] array) {
 		byte[] signature = null;
 		Signature rsaForSign;
 		try {
@@ -672,10 +757,10 @@ public class ServerThread extends Thread {
 		}
 		return signature;
 	}
-  	
-  	public boolean verifySignature(byte[] sig, byte[] data){
-  		boolean verifies = false;
-	  	try {
+
+	public boolean verifySignature(byte[] sig, byte[] data) {
+		boolean verifies = false;
+		try {
 			Signature rsaForVerify = Signature.getInstance("SHA256withRSA");
 			rsaForVerify.initVerify((PublicKey) getPublicKey(sig));
 			rsaForVerify.update(data);
@@ -686,23 +771,23 @@ public class ServerThread extends Thread {
 			e.printStackTrace();
 		}
 		return verifies;
-  	}
-  	
-  	public byte[] concatenate(byte[] a, byte[] b){
+	}
+
+	public byte[] concatenate(byte[] a, byte[] b) {
 		byte c[] = null;
-		
-		ByteArrayOutputStream outputStream = new ByteArrayOutputStream( );
-		
+
+		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+
 		try {
-			outputStream.write( a );
-			outputStream.write( b );
+			outputStream.write(a);
+			outputStream.write(b);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
-		c = outputStream.toByteArray( );
-		
+		c = outputStream.toByteArray();
+
 		return c;
 	}
 }
