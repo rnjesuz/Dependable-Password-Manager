@@ -83,6 +83,13 @@ public class ServerThread extends Thread {
 			decipherInput = decrypt(inputByte, privKey);
 			msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
 			sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
+			
+			if (!verifySignature(k, sig, msg)) {
+				System.out.println("Signature not verified, username not registered");
+				out.close();
+				in.close();
+				return;
+			}
 
 			String input = new String(msg, "UTF-8");
 			clientUsername = input;
@@ -129,6 +136,13 @@ public class ServerThread extends Thread {
 			decipherInput = decrypt(inputByte, privKey);
 			msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
 			sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
+			
+			if (!verifySignature(k, sig, msg)) {
+				System.out.println("Signature not verified, counter not synced");
+				in.close();
+				out.close();
+				return;
+			}
 
 			System.out.println("################################################");
 			System.out.println("RECEIVED MSG:");
@@ -154,6 +168,11 @@ public class ServerThread extends Thread {
 				decipherInput = sessionDecrypt(sessionKey, iv, inputByte);
 				msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
 				sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
+				
+				if (!verifySignature(k, sig, msg)) {
+					System.out.println("Signature not verified, no action taken");
+					continue;
+				}
 
 				System.out.println("################################################");
 				System.out.println("RECEIVED MSG:");
@@ -186,6 +205,11 @@ public class ServerThread extends Thread {
 						msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
 						sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
 
+						if (!verifySignature(k, sig, msg)) {
+							System.out.println("Signature not verified");
+							break;
+						}
+						
 						System.out.println("################################################");
 						System.out.println("RECEIVED MSG:");
 						System.out.println(new String(inputByte, "UTF-8"));
@@ -222,8 +246,8 @@ public class ServerThread extends Thread {
 						msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
 						sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
 
-						if (!verifySignature(sig, msg)) {
-							System.out.println("Signatured not verified");
+						if (!verifySignature(getPublicKey(sig), sig, msg)) {
+							System.out.println("Signature not verified");
 							break;
 						}
 
@@ -251,7 +275,7 @@ public class ServerThread extends Thread {
 						msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
 						sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
 
-						if (!verifySignature(sig, msg)) {
+						if (!verifySignature(getPublicKey(sig), sig, msg)) {
 							System.out.println("Signatured not verified");
 							break;
 						}
@@ -305,7 +329,7 @@ public class ServerThread extends Thread {
 						msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
 						sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
 
-						if (!verifySignature(sig, msg)) {
+						if (!verifySignature(getPublicKey(sig),sig, msg)) {
 							System.out.println("Signature not verified");
 							break;
 						}
@@ -334,7 +358,7 @@ public class ServerThread extends Thread {
 						msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
 						sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
 
-						if (!verifySignature(sig, msg)) {
+						if (!verifySignature(getPublicKey(sig),sig, msg)) {
 							System.out.println("Signatured not verified");
 							break;
 						}
@@ -354,7 +378,7 @@ public class ServerThread extends Thread {
 						System.out.println("################################################");
 						System.out.println("");
 
-						if (!verifySignature(sig, msg)) {
+						if (!verifySignature(getPublicKey(sig),sig, msg)) {
 							System.out.println("Signatured not verified");
 							break;
 						}
@@ -408,15 +432,36 @@ public class ServerThread extends Thread {
 
 	public void put(Key publicKey, byte[] domain, byte[] username, byte[] password, byte[] signature) {
 		try {
-			String bar = "" + '#';
+			
+			StringBuilder hexString = new StringBuilder();
+			for (int i = 0; i < domain.length; i++)
+			  {
+			      String hex = Integer.toHexString(0xFF & domain[i]);
+			      if (hex.length() == 1)
+			          hexString.append('0');
+
+			      hexString.append(hex);
+			  }
+			
+			for (int i = 0; i < username.length; i++)
+			  {
+			      String hex = Integer.toHexString(0xFF & domain[i]);
+			      if (hex.length() == 1)
+			          hexString.append('0');
+
+			      hexString.append(hex);
+			  }
+			
+			/*String bar = "" + '#';
 			String _domain = new String(domain, "UTF-8");
-			String _username = new String(username, "UTF-8");
-			String filename = _domain + bar + _username;
+			String _username = new String(username, "UTF-8");*/
+			
+			String filename = hexString.toString().toUpperCase();
 
 			FileOutputStream fos = new FileOutputStream(clientUsername + File.separator + filename);
 
 			System.out.println("################################################");
-			System.out.println("Saving password with code " + _domain + bar + _username + " for " + clientUsername);
+			System.out.println("Saving password with code of client "  + clientUsername);
 			System.out.println("PASS:");
 			System.out.println(new String(password, "UTF-8"));
 			System.out.println("################################################");
@@ -434,11 +479,30 @@ public class ServerThread extends Thread {
 
 	public byte[] get(Key publicKey, byte[] domain, byte[] username, byte[] signature) throws Exception {
 		byte[] fail = "NULL".getBytes("UTF-8");
+		
+		StringBuilder hexString = new StringBuilder();
+		for (int i = 0; i < domain.length; i++)
+		  {
+		      String hex = Integer.toHexString(0xFF & domain[i]);
+		      if (hex.length() == 1)
+		          hexString.append('0');
 
-		String bar = "" + '#';
+		      hexString.append(hex);
+		  }
+		
+		for (int i = 0; i < username.length; i++)
+		  {
+		      String hex = Integer.toHexString(0xFF & domain[i]);
+		      if (hex.length() == 1)
+		          hexString.append('0');
+
+		      hexString.append(hex);
+		  }
+
+		/*String bar = "" + '#';
 		String _domain = new String(domain, "UTF-8");
-		String _username = new String(username, "UTF-8");
-		String filename = _domain + bar + _username;
+		String _username = new String(username, "UTF-8");*/
+		String filename = hexString.toString().toUpperCase();
 
 		File file = new File(clientUsername + File.separator + filename);
 		File dir = new File(clientUsername);
@@ -456,7 +520,7 @@ public class ServerThread extends Thread {
 				out.writeInt(pass.length);
 				out.writeInt(output.length);
 				System.out.println("################################################");
-				System.out.println("sending password of " + _domain + bar + _username + " to " + clientUsername);
+				System.out.println("sending password to " + clientUsername);
 				System.out.println("PASS:");
 				System.out.println(new String(pass, "UTF-8"));
 				System.out.println("################################################");
@@ -702,11 +766,11 @@ public class ServerThread extends Thread {
 		return signature;
 	}
 
-	public boolean verifySignature(byte[] sig, byte[] data) {
+	public boolean verifySignature(Key key, byte[] sig, byte[] data) {
 		boolean verifies = false;
 		try {
 			Signature rsaForVerify = Signature.getInstance("SHA256withRSA");
-			rsaForVerify.initVerify((PublicKey) getPublicKey(sig));
+			rsaForVerify.initVerify((PublicKey) key);
 			rsaForVerify.update(data);
 			verifies = rsaForVerify.verify(sig);
 			System.out.println("Signature verifies: " + verifies);

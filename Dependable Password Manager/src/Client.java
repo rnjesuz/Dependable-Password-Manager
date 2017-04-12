@@ -86,10 +86,10 @@ public class Client {
 					byte[] putdomain, putusername, putpassword;
 					System.out.println("Insert the desired domain:");
 					a = System.console().readLine();
-					putdomain = hashCode(a).getBytes("UTF-8");
+					putdomain = hashCode(a);
 					System.out.println("Insert the desired username:");
 					a = System.console().readLine();
-					putusername = hashCode(a).getBytes("UTF-8");
+					putusername = hashCode(a);
 					System.out.println("Insert the desired password:");
 					putpassword = encrypt(System.console().readLine().getBytes("UTF-8"), pubKey);
 					System.out.println("Ciphering password witn Client Public Key");
@@ -102,10 +102,10 @@ public class Client {
 					byte[] getdomain, getusername;
 					System.out.println("Insert the desired domain:");
 					aa = System.console().readLine();
-					getdomain = hashCode(aa).getBytes("UTF-8");
+					getdomain = hashCode(aa);
 					System.out.println("Insert the desired username:");
 					aa = System.console().readLine();
-					getusername = hashCode(aa).getBytes("UTF-8");
+					getusername = hashCode(aa);
 
 					client.retrieve_password(getdomain, getusername);
 					break;
@@ -175,7 +175,7 @@ public class Client {
 		out.flush();
 		out.writeInt("counter".getBytes("UTF-8").length);// Sends length of
 															// msg
-		byte[] msgSign = concatenate("counter".getBytes("UTF-8"), signature("username".getBytes("UTF-8")));// creates
+		byte[] msgSign = concatenate("counter".getBytes("UTF-8"), signature("counter".getBytes("UTF-8")));// creates
 																											// MSG+SIG
 		byte[] toSend = encrypt(msgSign, getServerKey());// Cipher
 		out.writeInt(toSend.length);// Sends total length
@@ -296,15 +296,17 @@ public class Client {
 	}
 
 	// HASH CODE
-	public static String hashCode(String str) {
-		int hash = 7;
-		for (int i = 0; i < str.length(); i++) {
-			hash = hash * 31 + str.charAt(i);
+	public static byte[] hashCode(String str) {
+		byte[] response=null;
+		try {
+			MessageDigest digest = MessageDigest.getInstance("SHA-256");
+			response = digest.digest(str.getBytes("UTF-8"));
+		} catch (UnsupportedEncodingException e) {
+			e.printStackTrace();
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
 		}
-
-		System.out.println("Hashing: " + str + " to " + hash);
-		return "" + hash;
-
+		return response;
 	}
 
 	public void register_user() throws IOException {
@@ -502,7 +504,7 @@ public class Client {
 			
 			inputByte = Arrays.copyOfRange(decipherInput, 0, passLength);
 			byte[] sig = Arrays.copyOfRange(decipherInput, passLength, passLength+256);
-			System.out.println("The password you requested: " + new String(decrypt(inputByte, privKey), "UTF-8"));
+			
 			if(!verifySignature(sig, inputByte)) {
 				System.out.println("Signature not verified, operation aborted");
 				return;
