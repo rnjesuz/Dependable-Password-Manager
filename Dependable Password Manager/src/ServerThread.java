@@ -45,7 +45,7 @@ public class ServerThread extends Thread {
 	static Key privKey;
 	static Key pubKey;
 	DataOutputStream out;
-	int counter = 1;
+	int counter = (int) Math.random();
 
 	public ServerThread(Socket socket) {
 
@@ -62,44 +62,29 @@ public class ServerThread extends Thread {
 			out = new DataOutputStream(this.socket.getOutputStream());
 
 			DataInputStream in = new DataInputStream(socket.getInputStream());
-
-			int msgLenght = in.readInt();
-			int lenght = in.readInt();
-			byte[] inputByte = new byte[lenght];
+			
+			// checking for username
+//============================================================================================================================================
+			int msgLenght;
+			int lenght;
+			byte[] inputByte;
 			byte[] decipherInput;
 			byte[] msg;
 			byte[] sig;
-			in.readFully(inputByte, 0, lenght);
-			decipherInput = decrypt(inputByte, privKey);
-			msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
-			sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
+			Key k;
+			
+			k = receivePublicKey();
 
-			System.out.println("################################################");
-			System.out.println("RECEIVED MSG:");
-			System.out.println(new String(inputByte, "UTF-8"));
-			System.out.println("================================================");
-			System.out.println("DECRYPTED MSG:");
-			System.out.println(new String(msg, "UTF-8"));
-			System.out.println("================================================");
-			System.out.println("SIGNATURE:");
-			System.out.println(new String(sig, "UTF-8"));
-			System.out.println("################################################");
-			System.out.println("");
-
-			String input = new String(msg, "UTF-8");
-
-			// checking for username
-			// generating sessionKey
 			msgLenght = in.readInt();
 			lenght = in.readInt();
 			inputByte = new byte[lenght];
+			
 			in.readFully(inputByte, 0, lenght);
 			decipherInput = decrypt(inputByte, privKey);
 			msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
 			sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
 
-			input = new String(msg, "UTF-8");
-			System.out.println("o input e !!!!!!!!" + input);
+			String input = new String(msg, "UTF-8");
 			clientUsername = input;
 
 			System.out.println("################################################");
@@ -113,7 +98,8 @@ public class ServerThread extends Thread {
 			System.out.println(new String(sig, "UTF-8"));
 			System.out.println("################################################");
 			System.out.println("");
-
+//======================================================================================================================================
+			// generating sessionKey
 			KeyGenerator keyGen = KeyGenerator.getInstance("AES");
 			keyGen.init(128);
 			sessionKey = keyGen.generateKey();
@@ -124,15 +110,18 @@ public class ServerThread extends Thread {
 										// always 16bytes
 			random.nextBytes(ivaux);
 			iv = new IvParameterSpec(ivaux);
+			byte[] sessionCipher= encrypt(Base64.getDecoder().decode(Base64.getEncoder().encodeToString(sessionKey.getEncoded())), k);
+			byte[] ivCipher = encrypt(iv.getIV(), k);
 
-			out.write(Base64.getDecoder().decode(Base64.getEncoder().encodeToString(sessionKey.getEncoded())));
+			out.writeInt(sessionCipher.length);
+			out.writeInt(ivCipher.length);
+			out.write(sessionCipher);
 			out.flush();
-			out.write(iv.getIV());
+			out.write(ivCipher);
 			out.flush();
-
+//==================================================================================================================================
 			// checking for counter
 			// sending actual counter
-			System.out.println("ayooooooo");
 			msgLenght = in.readInt();
 			lenght = in.readInt();
 			inputByte = new byte[lenght];
@@ -155,13 +144,14 @@ public class ServerThread extends Thread {
 
 			input = new String(msg, "UTF-8");
 			out.writeInt(counter);
+//============================================================================================================================================			
 			while (socket.isConnected()) {
 				// preparing variables for command requests
 				msgLenght = in.readInt();
 				lenght = in.readInt();
 				inputByte = new byte[lenght];
 				in.readFully(inputByte, 0, lenght);
-				decipherInput = decrypt(inputByte, privKey);
+				decipherInput = sessionDecrypt(sessionKey, iv, inputByte);
 				msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
 				sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
 
@@ -181,52 +171,6 @@ public class ServerThread extends Thread {
 
 				int proposedCounter;
 				switch (input) {
-				/*
-				 * case "counter": out.writeInt(counter); break;
-				 */
-
-				/*
-				 * case "username": msgLenght = in.readInt(); lenght =
-				 * in.readInt(); inputByte = new byte[lenght];
-				 * in.readFully(inputByte, 0, lenght); decipherInput =
-				 * decrypt(inputByte, privKey); msg =
-				 * Arrays.copyOfRange(decipherInput, 0, msgLenght); sig =
-				 * Arrays.copyOfRange(decipherInput, msgLenght,
-				 * decipherInput.length);
-				 * 
-				 * input = new String (msg, "UTF-8"); clientUsername = input;
-				 * 
-				 * System.out.println(
-				 * "################################################");
-				 * System.out.println("RECEIVED MSG:"); System.out.println(new
-				 * String(inputByte, "UTF-8")); System.out.println(
-				 * "================================================");
-				 * System.out.println("DECRYPTED MSG:"); System.out.println(new
-				 * String(msg, "UTF-8")); System.out.println(
-				 * "================================================");
-				 * System.out.println("SIGNATURE:"); System.out.println(new
-				 * String(sig, "UTF-8")); System.out.println(
-				 * "################################################");
-				 * System.out.println("");
-				 * 
-				 * KeyGenerator keyGen = KeyGenerator.getInstance("AES");
-				 * keyGen.init(128); sessionKey = keyGen.generateKey();
-				 * 
-				 * // build the initialization vector (randomly). SecureRandom
-				 * random = new SecureRandom(); byte ivaux[] = new
-				 * byte[16];//generate random 16 byte IV AES is always 16bytes
-				 * random.nextBytes(ivaux); iv = new IvParameterSpec(ivaux);
-				 * 
-				 * out.write(Base64.getDecoder().decode(Base64.getEncoder().
-				 * encodeToString(sessionKey.getEncoded()))); out.flush();
-				 * out.write(iv.getIV()); out.flush();
-				 * 
-				 * break;
-				 */
-
-				case "time":
-					sendClock();
-					break;
 
 				case "register":
 					proposedCounter = in.readInt();

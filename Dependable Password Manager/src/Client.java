@@ -139,15 +139,14 @@ public class Client {
 
 	@SuppressWarnings("null")
 	public void sendUsername() throws IOException {
-
-		out.flush();
-		out.writeInt("username".getBytes("UTF-8").length);// Sends length of
-															// msg
-		byte[] msgSign = concatenate("username".getBytes("UTF-8"), signature("username".getBytes("UTF-8")));// creates
-																											// MSG+SIG
-		byte[] toSend = encrypt(msgSign, getServerKey());// Cipher
-		out.writeInt(toSend.length);// Sends total length
-		out.write(toSend);// Sends {MSG+SIG}serverpubkey
+		byte[] msgSign;
+		byte[] toSend;
+		ByteBuffer bb = ByteBuffer.allocate(8);
+		
+		
+		bb.putInt(pubKey.getEncoded().length);
+		clientSocket.getOutputStream().write(bb.array());
+		clientSocket.getOutputStream().write(pubKey.getEncoded());
 
 		out.flush();
 		out.writeInt(username.getBytes("UTF-8").length);// Sends length of
@@ -158,13 +157,16 @@ public class Client {
 		out.writeInt(toSend.length);// Sends total length
 		out.write(toSend);// Sends {MSG+SIG}serverpubkey
 		
+		int keySize = in.readInt();
+		int ivSize = in.readInt();
+		byte[] cipherKey = new byte[keySize];
 		byte[] key = new byte[16];
-		byte[] ivaux = new byte[16];
-		in.readFully(key);
-		in.readFully(ivaux);
+		byte[] cipherIv = new byte[ivSize];
+		in.readFully(cipherKey);
+		in.readFully(cipherIv);
 		
-		sessionKey = new SecretKeySpec(key, 0, key.length, "AES"); 
-		iv = new IvParameterSpec(ivaux);
+		sessionKey = new SecretKeySpec(decrypt(cipherKey, privKey), 0, key.length, "AES"); 
+		iv = new IvParameterSpec(decrypt(cipherIv, privKey));
 	}
 
 	public void askServerClock() throws IOException {
@@ -211,7 +213,6 @@ public class Client {
 		} catch (NoSuchAlgorithmException | CertificateException | UnrecoverableKeyException | KeyStoreException e) {
 			e.printStackTrace();
 		}
-
 	}
 
 	public static void createNewKeyStore(KeyStore ks, java.io.FileInputStream fis, String username, String password) {
@@ -322,7 +323,7 @@ public class Client {
 		System.out.println("Request Sign: " + (new String(msgSign)));
 		System.out.println("Ciphering signed request, using server public key");
 		System.out.println("=============================================================");
-		byte[] toSend = encrypt(msgSign, getServerKey());// Cipher
+		byte[] toSend = sessionEncrypt(sessionKey, iv , msgSign);// Cipher
 		System.out.println("Ciphered signed request: " + (new String(toSend)));
 		out.writeInt(toSend.length);// Sends total length
 		out.write(toSend);// Sends {MSG+SIG}serverpubkey
@@ -372,7 +373,7 @@ public class Client {
 			System.out.println("Request Sign: " + (new String(msgSign)));
 			System.out.println("Ciphering signed request, using server public key");
 			System.out.println("=============================================================");
-			byte[] toSend = encrypt(msgSign, getServerKey());// Cipher
+			byte[] toSend = sessionEncrypt(sessionKey, iv , msgSign);// Cipher
 			System.out.println("Ciphered signed request: " + (new String(toSend)));
 			out.writeInt(toSend.length);// Sends total length
 			out.write(toSend);// Sends {MSG+SIG}serverpubkey
@@ -444,7 +445,7 @@ public class Client {
 			System.out.println("Request Sign: " + (new String(msgSign)));
 			System.out.println("Ciphering signed request, using server public key");
 			System.out.println("=============================================================");
-			byte[] toSend = encrypt(msgSign, getServerKey());// Cipher
+			byte[] toSend = sessionEncrypt(sessionKey, iv , msgSign);// Cipher
 			System.out.println("Ciphered signed request: " + (new String(toSend)));
 			out.writeInt(toSend.length);// Sends total length
 			out.write(toSend);// Sends {MSG+SIG}serverpubkey
