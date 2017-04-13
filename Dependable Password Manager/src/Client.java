@@ -6,6 +6,7 @@ import java.security.*;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
+import java.util.Base64;
 
 import javax.crypto.*;
 import javax.crypto.spec.IvParameterSpec;
@@ -149,24 +150,91 @@ public class Client {
 		clientSocket.getOutputStream().write(pubKey.getEncoded());
 
 		out.flush();
-		out.writeInt(username.getBytes("UTF-8").length);// Sends length of
+		//out.writeInt(username.getBytes("UTF-8").length);// Sends length of
 														// msg
-		msgSign = concatenate(username.getBytes("UTF-8"), signature(username.getBytes("UTF-8")));// creates
+		/*msgSign = concatenate(username.getBytes("UTF-8"), signature(username.getBytes("UTF-8")));// creates
 																									// MSG+SIG
 		toSend = encrypt(msgSign, getServerKey());// Cipher
 		out.writeInt(toSend.length);// Sends total length
-		out.write(toSend);// Sends {MSG+SIG}serverpubkey
+		out.write(toSend);// Sends {MSG+SIG}serverpubkey*/
+		byte[] msgSign1= encrypt(username.getBytes("UTF-8"), getServerKey());
+		byte[] sig0= signature(username.getBytes("UTF-8"));
+		byte[] sigPart1 = encrypt(Arrays.copyOfRange(sig0, 0, (sig0.length/2)), getServerKey());
+		byte[] sigPart2 = encrypt(Arrays.copyOfRange(sig0, (sig0.length/2), sig0.length), getServerKey());
+		toSend= concatenate(msgSign1, sigPart1);
+		out.writeInt(toSend.length);
+		out.writeInt(msgSign1.length);
+		out.write(toSend);
+		out.flush();
+		System.out.println("DEBUG: " + sigPart2.length);
+		out.write(sigPart2);
 		
-		int keySize = in.readInt();
+		
+		/*int keyCipher = in.readInt();
+		int msgSize = in.readInt();
 		int ivSize = in.readInt();
-		byte[] cipherKey = new byte[keySize];
-		byte[] key = new byte[16];
-		byte[] cipherIv = new byte[ivSize];
+		byte[] cipherKey = new byte[keyCipher];
 		in.readFully(cipherKey);
-		in.readFully(cipherIv);
+		byte[] decipherInput = decrypt(cipherKey, privKey);
+		byte[] msg = Arrays.copyOfRange(decipherInput, 0, 16);
+		byte[] sig = Arrays.copyOfRange(decipherInput, 16, decipherInput.length);
+		 */
 		
-		sessionKey = new SecretKeySpec(decrypt(cipherKey, privKey), 0, key.length, "AES"); 
-		iv = new IvParameterSpec(decrypt(cipherIv, privKey));
+		int lenght = in.readInt();
+		int msgLenght = in.readInt();
+		byte[] inputByte = new byte[lenght];
+		
+		in.readFully(inputByte, 0, lenght);
+		System.out.println("DEBUG: " + 1);
+		byte[] cipherMsg = Arrays.copyOfRange(inputByte, 0, msgLenght);
+		byte[] cipherSig = Arrays.copyOfRange(inputByte, msgLenght, lenght);
+		byte[] msg = decrypt(cipherMsg, privKey);
+		byte[] sig = decrypt(cipherSig, privKey);
+		
+		inputByte = new byte[256];
+		in.readFully(inputByte, 0, 256);
+		System.out.println("DEBUG: " + 2);
+		byte[] sigPart = decrypt(inputByte, privKey);
+		sig = concatenate(sig, sigPart);
+		
+		if (!verifySignature(sig, msg)) {
+			System.out.println("Signature not verified, username not registered");
+			out.close();
+			in.close();
+			return;
+		}
+		sessionKey = new SecretKeySpec(msg, 0, 16, "AES");
+		
+		
+		/*byte[] cipherIv = new byte[ivSize];
+		in.readFully(cipherIv);
+		decipherInput = decrypt(cipherIv, privKey);
+		msg = Arrays.copyOfRange(decipherInput, 0, 16);
+		sig = Arrays.copyOfRange(decipherInput, 16, decipherInput.length);*/
+		lenght = in.readInt();
+		msgLenght = in.readInt();
+		inputByte = new byte[lenght];
+		
+		in.readFully(inputByte, 0, lenght);
+		System.out.println("DEBUG: " + 1);
+		cipherMsg = Arrays.copyOfRange(inputByte, 0, msgLenght);
+		cipherSig = Arrays.copyOfRange(inputByte, msgLenght, lenght);
+		msg = decrypt(cipherMsg, privKey);
+		sig = decrypt(cipherSig, privKey);
+		
+		inputByte = new byte[256];
+		in.readFully(inputByte, 0, 256);
+		System.out.println("DEBUG: " + 2);
+		sigPart = decrypt(inputByte, privKey);
+		sig = concatenate(sig, sigPart);
+		
+		if (!verifySignature(sig, msg)) {
+			System.out.println("Signature not verified, username not registered");
+			out.close();
+			in.close();
+			return;
+		}
+		iv = new IvParameterSpec(msg);
 	}
 
 	public void askServerClock() throws IOException {
@@ -177,7 +245,7 @@ public class Client {
 															// msg
 		byte[] msgSign = concatenate("counter".getBytes("UTF-8"), signature("counter".getBytes("UTF-8")));// creates
 																											// MSG+SIG
-		byte[] toSend = encrypt(msgSign, getServerKey());// Cipher
+		byte[] toSend = sessionEncrypt(sessionKey, iv, msgSign);// Cipher
 		out.writeInt(toSend.length);// Sends total length
 		out.write(toSend);// Sends {MSG+SIG}serverpubkey
 
@@ -251,7 +319,7 @@ public class Client {
 		KeyPair kp = null;
 		try {
 			kpg = KeyPairGenerator.getInstance("RSA");
-			kpg.initialize(1024);
+			kpg.initialize(2048);
 			kp = kpg.genKeyPair();
 
 		} catch (NoSuchAlgorithmException e) {
@@ -579,7 +647,7 @@ public class Client {
 		byte[] signature = null;
 		Signature rsaForSign;
 		try {
-			rsaForSign = Signature.getInstance("SHA256withRSA");
+			rsaForSign = Signature.getInstance("MD2withRSA");
 			rsaForSign.initSign((PrivateKey) privKey);
 			rsaForSign.update(array);
 			signature = rsaForSign.sign();
@@ -593,7 +661,7 @@ public class Client {
 	public boolean verifySignature(byte[] sig, byte[] data) {
 		boolean verifies = false;
 		try {
-			Signature rsaForVerify = Signature.getInstance("SHA256withRSA");
+			Signature rsaForVerify = Signature.getInstance("MD2withRSA");
 			rsaForVerify.initVerify((PublicKey) getServerKey());
 			rsaForVerify.update(data);
 			verifies = rsaForVerify.verify(sig);

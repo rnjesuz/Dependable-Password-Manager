@@ -70,19 +70,34 @@ public class ServerThread extends Thread {
 			byte[] inputByte;
 			byte[] decipherInput;
 			byte[] msg;
+			byte[] cipherMsg;
 			byte[] sig;
+			byte[] sigPart;
+			byte[] cipherSig;
 			Key k;
 			
 			k = receivePublicKey();
 
-			msgLenght = in.readInt();
 			lenght = in.readInt();
+			msgLenght = in.readInt();
 			inputByte = new byte[lenght];
 			
 			in.readFully(inputByte, 0, lenght);
-			decipherInput = decrypt(inputByte, privKey);
+			System.out.println("DEBUG: " + 1);
+			cipherMsg = Arrays.copyOfRange(inputByte, 0, msgLenght);
+			cipherSig = Arrays.copyOfRange(inputByte, msgLenght, lenght);
+			msg = decrypt(cipherMsg, privKey);
+			sig = decrypt(cipherSig, privKey);
+			
+			inputByte = new byte[256];
+			in.readFully(inputByte, 0, 256);
+			System.out.println("DEBUG: " + 2);
+			sigPart = decrypt(inputByte, privKey);
+			sig = concatenate(sig, sigPart);
+			
+			/*decipherInput = decrypt(inputByte, privKey);
 			msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
-			sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
+			sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);*/
 			
 			if (!verifySignature(k, sig, msg)) {
 				System.out.println("Signature not verified, username not registered");
@@ -113,18 +128,40 @@ public class ServerThread extends Thread {
 
 			// build the initialization vector (randomly).
 			SecureRandom random = new SecureRandom();
-			byte ivaux[] = new byte[16];// generate random 16 byte IV AES is
-										// always 16bytes
-			random.nextBytes(ivaux);
+			byte ivaux[] = new byte[16];// generate random 16 byte IV AES is						
+			random.nextBytes(ivaux);// always 16bytes
 			iv = new IvParameterSpec(ivaux);
-			byte[] sessionCipher= encrypt(Base64.getDecoder().decode(Base64.getEncoder().encodeToString(sessionKey.getEncoded())), k);
-			byte[] ivCipher = encrypt(iv.getIV(), k);
-
+			
+			/*byte[] msgSign1 = encrypt(signature(Base64.getDecoder().decode(Base64.getEncoder().encodeToString(sessionKey.getEncoded()))), k);
+			byte[] msgSign2= encrypt(Base64.getDecoder().decode(Base64.getEncoder().encodeToString(sessionKey.getEncoded())), k);
+			byte[] sessionCipher= concatenate(msgSign1, msgSign2);
+			out.writeInt(msgSign1.length);*/
+			byte[] msgSign1= encrypt(Base64.getDecoder().decode(Base64.getEncoder().encodeToString(sessionKey.getEncoded())), k);
+			byte[] sig0= signature(Base64.getDecoder().decode(Base64.getEncoder().encodeToString(sessionKey.getEncoded())));
+			byte[] sigPart1 = encrypt(Arrays.copyOfRange(sig0, 0, (sig0.length/2)), k);
+			byte[] sigPart2 = encrypt(Arrays.copyOfRange(sig0, (sig0.length/2), sig0.length), k);
+			byte[] sessionCipher= concatenate(msgSign1, sigPart1);
 			out.writeInt(sessionCipher.length);
-			out.writeInt(ivCipher.length);
+			out.writeInt(msgSign1.length);
 			out.write(sessionCipher);
 			out.flush();
-			out.write(ivCipher);
+			System.out.println("DEBUG: " + sigPart2.length);
+			out.write(sigPart2);
+			
+			
+			/*msgSign1 = concatenate(iv.getIV(), signature(iv.getIV()));
+			byte[] ivCipher = encrypt(msgSign1, k);*/
+			msgSign1= encrypt(iv.getIV(), k);
+			sig0= signature(iv.getIV());
+			sigPart1 = encrypt(Arrays.copyOfRange(sig0, 0, (sig0.length/2)), k);
+			sigPart2 = encrypt(Arrays.copyOfRange(sig0, (sig0.length/2), sig0.length), k);
+			sessionCipher= concatenate(msgSign1, sigPart1);
+			out.writeInt(sessionCipher.length);
+			out.writeInt(msgSign1.length);
+			out.write(sessionCipher);
+			out.flush();
+			System.out.println("DEBUG: " + sigPart2.length);
+			out.write(sigPart2);
 			out.flush();
 //==================================================================================================================================
 			// checking for counter
@@ -133,7 +170,7 @@ public class ServerThread extends Thread {
 			lenght = in.readInt();
 			inputByte = new byte[lenght];
 			in.readFully(inputByte, 0, lenght);
-			decipherInput = decrypt(inputByte, privKey);
+			decipherInput = sessionDecrypt(sessionKey, iv, inputByte);
 			msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
 			sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
 			
@@ -755,7 +792,7 @@ public class ServerThread extends Thread {
 		byte[] signature = null;
 		Signature rsaForSign;
 		try {
-			rsaForSign = Signature.getInstance("SHA256withRSA");
+			rsaForSign = Signature.getInstance("MD2withRSA");
 			rsaForSign.initSign((PrivateKey) privKey);
 			rsaForSign.update(array);
 			signature = rsaForSign.sign();
@@ -769,7 +806,7 @@ public class ServerThread extends Thread {
 	public boolean verifySignature(Key key, byte[] sig, byte[] data) {
 		boolean verifies = false;
 		try {
-			Signature rsaForVerify = Signature.getInstance("SHA256withRSA");
+			Signature rsaForVerify = Signature.getInstance("MD2withRSA");
 			rsaForVerify.initVerify((PublicKey) key);
 			rsaForVerify.update(data);
 			verifies = rsaForVerify.verify(sig);
