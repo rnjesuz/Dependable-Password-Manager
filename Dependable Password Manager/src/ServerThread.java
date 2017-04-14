@@ -45,7 +45,7 @@ public class ServerThread extends Thread {
 	static Key privKey;
 	static Key pubKey;
 	DataOutputStream out;
-	int counter = (int) Math.random();
+	int counter = 1 + (int)(Math.random() * 100000);
 
 	public ServerThread(Socket socket) {
 
@@ -67,9 +67,12 @@ public class ServerThread extends Thread {
 //============================================================================================================================================
 			int msgLenght;
 			int lenght;
+			int crLength;
+			int proposedCounter;
 			byte[] inputByte;
 			byte[] decipherInput;
 			byte[] msg;
+			byte[] counterBytes;
 			byte[] cipherMsg;
 			byte[] sig;
 			byte[] sigPart;
@@ -94,10 +97,6 @@ public class ServerThread extends Thread {
 			System.out.println("DEBUG: " + 2);
 			sigPart = decrypt(inputByte, privKey);
 			sig = concatenate(sig, sigPart);
-			
-			/*decipherInput = decrypt(inputByte, privKey);
-			msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
-			sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);*/
 			
 			if (!verifySignature(k, sig, msg)) {
 				System.out.println("Signature not verified, username not registered");
@@ -132,10 +131,6 @@ public class ServerThread extends Thread {
 			random.nextBytes(ivaux);// always 16bytes
 			iv = new IvParameterSpec(ivaux);
 			
-			/*byte[] msgSign1 = encrypt(signature(Base64.getDecoder().decode(Base64.getEncoder().encodeToString(sessionKey.getEncoded()))), k);
-			byte[] msgSign2= encrypt(Base64.getDecoder().decode(Base64.getEncoder().encodeToString(sessionKey.getEncoded())), k);
-			byte[] sessionCipher= concatenate(msgSign1, msgSign2);
-			out.writeInt(msgSign1.length);*/
 			byte[] msgSign1= encrypt(Base64.getDecoder().decode(Base64.getEncoder().encodeToString(sessionKey.getEncoded())), k);
 			byte[] sig0= signature(Base64.getDecoder().decode(Base64.getEncoder().encodeToString(sessionKey.getEncoded())));
 			byte[] sigPart1 = encrypt(Arrays.copyOfRange(sig0, 0, (sig0.length/2)), k);
@@ -148,9 +143,7 @@ public class ServerThread extends Thread {
 			System.out.println("DEBUG: " + sigPart2.length);
 			out.write(sigPart2);
 			
-			
-			/*msgSign1 = concatenate(iv.getIV(), signature(iv.getIV()));
-			byte[] ivCipher = encrypt(msgSign1, k);*/
+
 			msgSign1= encrypt(iv.getIV(), k);
 			sig0= signature(iv.getIV());
 			sigPart1 = encrypt(Arrays.copyOfRange(sig0, 0, (sig0.length/2)), k);
@@ -164,53 +157,42 @@ public class ServerThread extends Thread {
 			out.write(sigPart2);
 			out.flush();
 //==================================================================================================================================
-			// checking for counter
-			// sending actual counter
-			msgLenght = in.readInt();
-			lenght = in.readInt();
-			inputByte = new byte[lenght];
-			in.readFully(inputByte, 0, lenght);
-			decipherInput = sessionDecrypt(sessionKey, iv, inputByte);
-			msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
-			sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
-			
-			if (!verifySignature(k, sig, msg)) {
-				System.out.println("Signature not verified, counter not synced");
-				in.close();
-				out.close();
-				return;
-			}
+			// sending counter
+			out.writeInt(Integer.toString(counter).getBytes("UTF-8").length);
+			byte[] msgSign = concatenate(Integer.toString(counter).getBytes("UTF-8"), signature(Integer.toString(counter).getBytes("UTF-8")));// creates
+																												// MSG+SIG
+			byte[] toSend = sessionEncrypt(sessionKey, iv , msgSign);// Cipher
+			out.writeInt(toSend.length);// Sends total length
+			out.write(toSend);// Sends {MSG+SIG}serverpubkey
+			System.out.println("Challenge Response send");
 
-			System.out.println("################################################");
-			System.out.println("RECEIVED MSG:");
-			System.out.println(new String(inputByte, "UTF-8"));
-			System.out.println("================================================");
-			System.out.println("DECRYPTED MSG:");
-			System.out.println(new String(msg, "UTF-8"));
-			System.out.println("================================================");
-			System.out.println("SIGNATURE:");
-			System.out.println(new String(sig, "UTF-8"));
-			System.out.println("################################################");
-			System.out.println("");
-
-			input = new String(msg, "UTF-8");
-			out.writeInt(counter);
 //============================================================================================================================================			
 			while (socket.isConnected()) {
 				// preparing variables for command requests
 				msgLenght = in.readInt();
+				crLength = in.readInt();
+				int msgCrLength = in.readInt();
 				lenght = in.readInt();
 				inputByte = new byte[lenght];
 				in.readFully(inputByte, 0, lenght);
 				decipherInput = sessionDecrypt(sessionKey, iv, inputByte);
-				msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
-				sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
+				msg = Arrays.copyOfRange(decipherInput, 0, msgCrLength);
+				sig = Arrays.copyOfRange(decipherInput, msgCrLength, decipherInput.length);
 				
 				if (!verifySignature(k, sig, msg)) {
 					System.out.println("Signature not verified, no action taken");
 					continue;
 				}
-
+				counterBytes = Arrays.copyOfRange(msg, 0, crLength);
+				msg = Arrays.copyOfRange(msg, crLength, msgCrLength);
+				proposedCounter = Integer.parseInt(new String(counterBytes, "UTF-8"));
+				
+				if (proposedCounter != calculateCounter()) {
+					System.out.println("Challenge Response failed");
+					continue;
+				}
+				counter = proposedCounter;
+					
 				System.out.println("################################################");
 				System.out.println("RECEIVED MSG:");
 				System.out.println(new String(inputByte, "UTF-8"));
@@ -225,27 +207,32 @@ public class ServerThread extends Thread {
 
 				input = new String(msg, "UTF-8");
 
-				int proposedCounter;
 				switch (input) {
 
 				case "register":
-					proposedCounter = in.readInt();
-					if (calculateCounter() != proposedCounter) {
-						throw new Exception();
-					} else {
-						counter = proposedCounter;
-						msgLenght = in.readInt();
-						lenght = in.readInt();
-						inputByte = new byte[lenght];
-						in.readFully(inputByte, 0, lenght);
-						decipherInput = sessionDecrypt(sessionKey, iv, inputByte);
-						msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
-						sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
-
-						if (!verifySignature(k, sig, msg)) {
-							System.out.println("Signature not verified");
-							break;
-						}
+					msgLenght = in.readInt();
+					crLength = in.readInt();
+					msgCrLength = in.readInt();
+					lenght = in.readInt();
+					inputByte = new byte[lenght];
+					in.readFully(inputByte, 0, lenght);
+					decipherInput = sessionDecrypt(sessionKey, iv, inputByte);
+					msg = Arrays.copyOfRange(decipherInput, 0, msgCrLength);
+					sig = Arrays.copyOfRange(decipherInput, msgCrLength, decipherInput.length);
+					
+					if (!verifySignature(k, sig, msg)) {
+						System.out.println("Signature not verified, no action taken");
+						break;
+					}
+					counterBytes = Arrays.copyOfRange(msg, 0, crLength);
+					msg = Arrays.copyOfRange(msg, crLength, msgCrLength);
+					proposedCounter = Integer.parseInt(new String(counterBytes, "UTF-8"));
+					
+					if (proposedCounter != calculateCounter()) {
+						System.out.println("Challenge Response failed");
+						break;
+					}
+					counter = proposedCounter;
 						
 						System.out.println("################################################");
 						System.out.println("RECEIVED MSG:");
@@ -260,33 +247,37 @@ public class ServerThread extends Thread {
 						System.out.println("");
 
 						register(receivePublicKey(), sig);
-					}
 
 					break;
 
 				case "put":
 
-					proposedCounter = in.readInt();
-					if (proposedCounter != calculateCounter()) {
-						throw new Exception();
-					} else {
-						counter = proposedCounter;
 						byte[] putDomain, putUsername, putPass;
 						System.out.println(input);
 
 						msgLenght = in.readInt();
+						crLength = in.readInt();
+						msgCrLength = in.readInt();
 						lenght = in.readInt();
 						inputByte = new byte[lenght];
 						in.readFully(inputByte, 0, lenght);
-						// decipherInput = decrypt(inputByte, privKey);
 						decipherInput = sessionDecrypt(sessionKey, iv, inputByte);
-						msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
-						sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
-
-						if (!verifySignature(getPublicKey(sig), sig, msg)) {
-							System.out.println("Signature not verified");
+						msg = Arrays.copyOfRange(decipherInput, 0, msgCrLength);
+						sig = Arrays.copyOfRange(decipherInput, msgCrLength, decipherInput.length);
+						
+						if (!verifySignature(k, sig, msg)) {
+							System.out.println("Signature not verified, no action taken");
 							break;
 						}
+						counterBytes = Arrays.copyOfRange(msg, 0, crLength);
+						msg = Arrays.copyOfRange(msg, crLength, msgCrLength);
+						proposedCounter = Integer.parseInt(new String(counterBytes, "UTF-8"));
+						
+						if (proposedCounter != calculateCounter()) {
+							System.out.println("Challenge Response failed");
+							break;
+						}
+						counter = proposedCounter;
 
 						putDomain = msg;
 						input = new String(msg, "UTF-8");
@@ -304,18 +295,28 @@ public class ServerThread extends Thread {
 						System.out.println("");
 
 						msgLenght = in.readInt();
+						crLength = in.readInt();
+						msgCrLength = in.readInt();
 						lenght = in.readInt();
 						inputByte = new byte[lenght];
 						in.readFully(inputByte, 0, lenght);
-						// decipherInput = decrypt(inputByte, privKey);
 						decipherInput = sessionDecrypt(sessionKey, iv, inputByte);
-						msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
-						sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
-
-						if (!verifySignature(getPublicKey(sig), sig, msg)) {
-							System.out.println("Signatured not verified");
+						msg = Arrays.copyOfRange(decipherInput, 0, msgCrLength);
+						sig = Arrays.copyOfRange(decipherInput, msgCrLength, decipherInput.length);
+						
+						if (!verifySignature(k, sig, msg)) {
+							System.out.println("Signature not verified, no action taken");
 							break;
 						}
+						counterBytes = Arrays.copyOfRange(msg, 0, crLength);
+						msg = Arrays.copyOfRange(msg, crLength, msgCrLength);
+						proposedCounter = Integer.parseInt(new String(counterBytes, "UTF-8"));
+						
+						if (proposedCounter != calculateCounter()) {
+							System.out.println("Challenge Response failed");
+							break;
+						}
+						counter = proposedCounter;
 
 						putUsername = msg;
 						input = new String(msg, "UTF-8");
@@ -344,33 +345,36 @@ public class ServerThread extends Thread {
 						System.out.println("");
 
 						put(getPublicKey(sig), putDomain, putUsername, putPass, sig);
-					}
+					
 
 					break;
 
 				case "get":
-					proposedCounter = in.readInt();
-					// System.out.println(proposedCounter);
-					if (proposedCounter != calculateCounter()) {
-						throw new Exception();
-					} else {
 						byte[] getDomain, getUsername;
-						counter = proposedCounter;
 
 						msgLenght = in.readInt();
+						crLength = in.readInt();
+						msgCrLength = in.readInt();
 						lenght = in.readInt();
 						inputByte = new byte[lenght];
 						in.readFully(inputByte, 0, lenght);
-						// decipherInput = decrypt(inputByte, privKey);
 						decipherInput = sessionDecrypt(sessionKey, iv, inputByte);
-						msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
-						sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
-
-						if (!verifySignature(getPublicKey(sig),sig, msg)) {
-							System.out.println("Signature not verified");
+						msg = Arrays.copyOfRange(decipherInput, 0, msgCrLength);
+						sig = Arrays.copyOfRange(decipherInput, msgCrLength, decipherInput.length);
+						
+						if (!verifySignature(k, sig, msg)) {
+							System.out.println("Signature not verified, no action taken");
 							break;
 						}
-
+						counterBytes = Arrays.copyOfRange(msg, 0, crLength);
+						msg = Arrays.copyOfRange(msg, crLength, msgCrLength);
+						proposedCounter = Integer.parseInt(new String(counterBytes, "UTF-8"));
+						
+						if (proposedCounter != calculateCounter()) {
+							System.out.println("Challenge Response failed");
+							break;
+						}
+						counter = proposedCounter;
 						getDomain = msg;
 						input = new String(msg, "UTF-8");
 
@@ -387,18 +391,28 @@ public class ServerThread extends Thread {
 						System.out.println("");
 
 						msgLenght = in.readInt();
+						crLength = in.readInt();
+						msgCrLength = in.readInt();
 						lenght = in.readInt();
 						inputByte = new byte[lenght];
 						in.readFully(inputByte, 0, lenght);
-						// decipherInput = decrypt(inputByte, privKey);
 						decipherInput = sessionDecrypt(sessionKey, iv, inputByte);
-						msg = Arrays.copyOfRange(decipherInput, 0, msgLenght);
-						sig = Arrays.copyOfRange(decipherInput, msgLenght, decipherInput.length);
-
-						if (!verifySignature(getPublicKey(sig),sig, msg)) {
-							System.out.println("Signatured not verified");
+						msg = Arrays.copyOfRange(decipherInput, 0, msgCrLength);
+						sig = Arrays.copyOfRange(decipherInput, msgCrLength, decipherInput.length);
+						
+						if (!verifySignature(k, sig, msg)) {
+							System.out.println("Signature not verified, no action taken");
 							break;
 						}
+						counterBytes = Arrays.copyOfRange(msg, 0, crLength);
+						msg = Arrays.copyOfRange(msg, crLength, msgCrLength);
+						proposedCounter = Integer.parseInt(new String(counterBytes, "UTF-8"));
+						
+						if (proposedCounter != calculateCounter()) {
+							System.out.println("Challenge Response failed");
+							break;
+						}
+						counter = proposedCounter;
 
 						getUsername = msg;
 						input = new String(msg, "UTF-8");
@@ -415,13 +429,8 @@ public class ServerThread extends Thread {
 						System.out.println("################################################");
 						System.out.println("");
 
-						if (!verifySignature(getPublicKey(sig),sig, msg)) {
-							System.out.println("Signatured not verified");
-							break;
-						}
-
 						get(getPublicKey(sig), getDomain, getUsername, sig);
-					}
+					
 					break;
 
 				default:

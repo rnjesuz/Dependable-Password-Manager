@@ -150,13 +150,7 @@ public class Client {
 		clientSocket.getOutputStream().write(pubKey.getEncoded());
 
 		out.flush();
-		//out.writeInt(username.getBytes("UTF-8").length);// Sends length of
-														// msg
-		/*msgSign = concatenate(username.getBytes("UTF-8"), signature(username.getBytes("UTF-8")));// creates
-																									// MSG+SIG
-		toSend = encrypt(msgSign, getServerKey());// Cipher
-		out.writeInt(toSend.length);// Sends total length
-		out.write(toSend);// Sends {MSG+SIG}serverpubkey*/
+
 		byte[] msgSign1= encrypt(username.getBytes("UTF-8"), getServerKey());
 		byte[] sig0= signature(username.getBytes("UTF-8"));
 		byte[] sigPart1 = encrypt(Arrays.copyOfRange(sig0, 0, (sig0.length/2)), getServerKey());
@@ -169,17 +163,7 @@ public class Client {
 		System.out.println("DEBUG: " + sigPart2.length);
 		out.write(sigPart2);
 		
-		
-		/*int keyCipher = in.readInt();
-		int msgSize = in.readInt();
-		int ivSize = in.readInt();
-		byte[] cipherKey = new byte[keyCipher];
-		in.readFully(cipherKey);
-		byte[] decipherInput = decrypt(cipherKey, privKey);
-		byte[] msg = Arrays.copyOfRange(decipherInput, 0, 16);
-		byte[] sig = Arrays.copyOfRange(decipherInput, 16, decipherInput.length);
-		 */
-		
+
 		int lenght = in.readInt();
 		int msgLenght = in.readInt();
 		byte[] inputByte = new byte[lenght];
@@ -205,12 +189,7 @@ public class Client {
 		}
 		sessionKey = new SecretKeySpec(msg, 0, 16, "AES");
 		
-		
-		/*byte[] cipherIv = new byte[ivSize];
-		in.readFully(cipherIv);
-		decipherInput = decrypt(cipherIv, privKey);
-		msg = Arrays.copyOfRange(decipherInput, 0, 16);
-		sig = Arrays.copyOfRange(decipherInput, 16, decipherInput.length);*/
+
 		lenght = in.readInt();
 		msgLenght = in.readInt();
 		inputByte = new byte[lenght];
@@ -240,16 +219,19 @@ public class Client {
 	public void askServerClock() throws IOException {
 
 		System.out.println("Asking for Challenge-Response");
-		out.flush();
-		out.writeInt("counter".getBytes("UTF-8").length);// Sends length of
-															// msg
-		byte[] msgSign = concatenate("counter".getBytes("UTF-8"), signature("counter".getBytes("UTF-8")));// creates
-																											// MSG+SIG
-		byte[] toSend = sessionEncrypt(sessionKey, iv, msgSign);// Cipher
-		out.writeInt(toSend.length);// Sends total length
-		out.write(toSend);// Sends {MSG+SIG}serverpubkey
-
-		counter = in.readInt();
+		int msgLength = in.readInt();
+		int length = in.readInt();
+		byte[] inputByte = new byte[length];
+		in.readFully(inputByte, 0, length);
+		byte[]decipherInput = sessionDecrypt(sessionKey, iv, inputByte);
+		byte[]msg = Arrays.copyOfRange(decipherInput, 0, msgLength);
+		byte[]sig = Arrays.copyOfRange(decipherInput, msgLength, decipherInput.length);
+		
+		if (!verifySignature(sig, msg)) {
+			System.out.println("Signature not verified, no action taken");
+			return;
+		}
+		counter = Integer.parseInt(new String(msg, "UTF-8"));
 		System.out.println("Challenge-Response: " + counter);
 	}
 
@@ -386,8 +368,13 @@ public class Client {
 		out.flush();
 		out.writeInt("register".getBytes("UTF-8").length);// Sends length of
 															// msg
+		byte[] challengeResponse = Integer.toString(calculateCounter()).getBytes("UTF-8");
+		int cr = challengeResponse.length;
+		out.writeInt(cr);
+		byte[] msg = concatenate(challengeResponse, "register".getBytes("UTF-8"));
+		out.writeInt(msg.length);
 		System.out.println("Signing Request with Client Private Key");
-		byte[] msgSign = concatenate("register".getBytes("UTF-8"), signature("register".getBytes("UTF-8")));// creates
+		byte[] msgSign = concatenate(msg, signature(msg));// creates
 																											// MSG+SIG
 		System.out.println("=============================================================");
 		System.out.println("Request Sign: " + (new String(msgSign)));
@@ -399,19 +386,22 @@ public class Client {
 		out.write(toSend);// Sends {MSG+SIG}serverpubkey
 		System.out.println("Request Sent");
 
-		System.out.println("=============================================================");
-		System.out.println("Request done! Doing Challenge-Response");
-		out.writeInt(calculateCounter());
-		System.out.println("=============================================================");
-		out.flush();
-
+		
 		System.out.println("=============================================================");
 		System.out.println("Sending username: " + username);
 		out.writeInt(username.getBytes("UTF-8").length);// Sends length of
 														// msg
-		System.out.println("Signing Username with Client Private Key");
-		msgSign = concatenate(username.getBytes("UTF-8"), signature(username.getBytes("UTF-8")));// creates
-																									// MSG+SIG
+
+		challengeResponse = Integer.toString(calculateCounter()).getBytes("UTF-8");
+		cr = challengeResponse.length;
+		out.writeInt(cr);
+		msg = concatenate(challengeResponse, username.getBytes("UTF-8"));
+		out.writeInt(msg.length);
+		System.out.println("Signing Request with Client Private Key");
+		msgSign = concatenate(msg, signature(msg));// creates
+		
+		
+		
 		System.out.println("=============================================================");
 		System.out.println("Username Sign: " + (new String(msgSign)));
 		System.out.println("Ciphering username, using server public key");
@@ -436,9 +426,15 @@ public class Client {
 			System.out.println("Sending request to save password");
 			out.flush();
 			out.writeInt("put".getBytes("UTF-8").length);// Sends length of msg
+
+			byte[] challengeResponse = Integer.toString(calculateCounter()).getBytes("UTF-8");
+			int cr = challengeResponse.length;
+			out.writeInt(cr);
+			byte[] msg = concatenate(challengeResponse, "put".getBytes("UTF-8"));
+			out.writeInt(msg.length);
 			System.out.println("Signing Request with Client Private Key");
-			byte[] msgSign = concatenate("put".getBytes("UTF-8"), signature("put".getBytes("UTF-8")));// creates
-																										// MSG+SIG
+			byte[] msgSign = concatenate(msg, signature(msg));// creates
+			
 			System.out.println("=============================================================");
 			System.out.println("Request Sign: " + (new String(msgSign)));
 			System.out.println("Ciphering signed request, using server public key");
@@ -449,16 +445,21 @@ public class Client {
 			out.write(toSend);// Sends {MSG+SIG}serverpubkey
 			System.out.println("Request Sent");
 
-			System.out.println("=============================================================");
-			System.out.println("Request done! Doing Challenge-Response");
-			out.writeInt(calculateCounter());
-			System.out.println("=============================================================");
 
 			System.out.println("Sending domain: " + (new String(domain, "UTF-8")));
 			out.flush();
 			out.writeInt(domain.length);// Sends length of msg
-			System.out.println("Signing Domain with Client Private Key");
-			msgSign = concatenate(domain, signature(domain));// creates MSG+SIG
+
+			challengeResponse = Integer.toString(calculateCounter()).getBytes("UTF-8");
+			cr = challengeResponse.length;
+			out.writeInt(cr);
+			msg = concatenate(challengeResponse, domain);
+			out.writeInt(msg.length);
+			System.out.println("Signing Request with Client Private Key");
+			msgSign = concatenate(msg, signature(msg));// creates
+			
+			
+			
 			System.out.println("=============================================================");
 			System.out.println("Domain Sign: " + (new String(msgSign)));
 			System.out.println("Ciphering domain, using server public key");
@@ -474,9 +475,16 @@ public class Client {
 			System.out.println("Sending username: " + (new String(username, "UTF-8")));
 			out.flush();
 			out.writeInt(username.length);// Sends length of msg
-			System.out.println("Signing username with Client Private Key");
-			msgSign = concatenate(username, signature(username));// creates
-																	// MSG+SIG
+
+			challengeResponse = Integer.toString(calculateCounter()).getBytes("UTF-8");
+			cr = challengeResponse.length;
+			out.writeInt(cr);
+			msg = concatenate(challengeResponse, username);
+			out.writeInt(msg.length);
+			System.out.println("Signing Request with Client Private Key");
+			msgSign = concatenate(msg, signature(msg));// creates
+			
+			
 			System.out.println("=============================================================");
 			System.out.println("Username Sign: " + (new String(msgSign)));
 			System.out.println("Ciphering username, using server public key");
@@ -508,9 +516,16 @@ public class Client {
 			System.out.println("Sending request to retrieve password");
 			out.flush();
 			out.writeInt("get".getBytes("UTF-8").length);// Sends length of msg
+
+			byte[] challengeResponse = Integer.toString(calculateCounter()).getBytes("UTF-8");
+			int cr = challengeResponse.length;
+			out.writeInt(cr);
+			byte[] msg = concatenate(challengeResponse, "get".getBytes("UTF-8"));
+			out.writeInt(msg.length);
 			System.out.println("Signing Request with Client Private Key");
-			byte[] msgSign = concatenate("get".getBytes("UTF-8"), signature("get".getBytes("UTF-8")));// creates
-																										// MSG+SIG
+			byte[] msgSign = concatenate(msg, signature(msg));// creates
+			
+			
 			System.out.println("=============================================================");
 			System.out.println("Request Sign: " + (new String(msgSign)));
 			System.out.println("Ciphering signed request, using server public key");
@@ -521,16 +536,20 @@ public class Client {
 			out.write(toSend);// Sends {MSG+SIG}serverpubkey
 			System.out.println("Request Sent");
 
-			System.out.println("=============================================================");
-			System.out.println("Request done! Doing Challenge-Response");
-			out.writeInt(calculateCounter());
-			System.out.println("=============================================================");
 
 			System.out.println("Sending domain: " + (new String(domain, "UTF-8")));
 			out.flush();
 			out.writeInt(domain.length);// Sends length of msg
-			System.out.println("Signing Domain with Client Private Key");
-			msgSign = concatenate(domain, signature(domain));// creates MSG+SIG
+
+			challengeResponse = Integer.toString(calculateCounter()).getBytes("UTF-8");
+			cr = challengeResponse.length;
+			out.writeInt(cr);
+			msg = concatenate(challengeResponse, domain);
+			out.writeInt(msg.length);
+			System.out.println("Signing Request with Client Private Key");
+			msgSign = concatenate(msg, signature(msg));// creates
+			
+			
 			System.out.println("=============================================================");
 			System.out.println("Domain Sign: " + (new String(msgSign)));
 			System.out.println("Ciphering domain, using server public key");
@@ -546,9 +565,17 @@ public class Client {
 			System.out.println("Sending username: " + (new String(username, "UTF-8")));
 			out.flush();
 			out.writeInt(username.length);// Sends length of msg
-			System.out.println("Signing username with Client Private Key");
-			msgSign = concatenate(username, signature(username));// creates
-																	// MSG+SIG
+
+			challengeResponse = Integer.toString(calculateCounter()).getBytes("UTF-8");
+			cr = challengeResponse.length;
+			out.writeInt(cr);
+			msg = concatenate(challengeResponse, username);
+			out.writeInt(msg.length);
+			System.out.println("Signing Request with Client Private Key");
+			msgSign = concatenate(msg, signature(msg));// creates
+			
+			
+			
 			System.out.println("=============================================================");
 			System.out.println("Username Sign: " + (new String(msgSign)));
 			System.out.println("Ciphering username, using server public key");
@@ -598,25 +625,14 @@ public class Client {
 		Key output = null;
 
 		try {
-			/*
-			 * BufferedReader brTest = new BufferedReader(new
-			 * FileReader("serverPubKey")); String text = brTest.readLine();
-			 * 
-			 * output = KeyFactory.getInstance("RSA").generatePublic(new
-			 * X509EncodedKeySpec(DatatypeConverter.parseHexBinary(text)));
-			 * brTest.close();
-			 */
 			String pass = "pass";
 			FileInputStream fis = new java.io.FileInputStream("ServerKeys");
 			KeyStore sk = KeyStore.getInstance("JKS");
 			// gets keystore if it already exists
 			sk.load(fis, pass.toCharArray());
 
-			Key serverPriv = sk.getKey("ServerKeys", pass.toCharArray());
 			Key serverPub = sk.getCertificate("ServerKeys").getPublicKey();
 
-			// output = KeyFactory.getInstance("RSA").generatePublic(new
-			// X509EncodedKeySpec(serverPub.getEncoded()));
 			output = serverPub;
 			fis.close();
 
@@ -633,9 +649,6 @@ public class Client {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (KeyStoreException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (UnrecoverableKeyException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
