@@ -3,7 +3,17 @@ import java.net.ServerSocket;
 import java.net.Socket;
 
 public class Server {
-
+	
+	//id used to diferentiate diferent server proccsses
+	private int ip;
+	//ip used by the server to create a socket
+	private int id;
+	
+	public Server(int _ip, int _id){
+		//ip = _ip;
+		//id = _id;
+	}
+	
 	public static void main(String[] args) {
 		ServerSocket serverSocket = null;
 
