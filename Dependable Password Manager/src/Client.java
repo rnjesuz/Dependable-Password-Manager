@@ -7,6 +7,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Random;
 
 import javax.crypto.*;
 import javax.crypto.spec.IvParameterSpec;
@@ -27,7 +28,8 @@ public class Client {
 	static String password = null;
 
 	public Client(String username, String password) throws IOException, UnknownHostException {
-		clientSocket = new Socket("localhost", 8080);
+		Random rand = new Random();
+		clientSocket = new Socket("localhost", rand.nextInt((8083 - 8080) + 1) + 8080);
 		out = new DataOutputStream(clientSocket.getOutputStream());
 		in = new DataInputStream(clientSocket.getInputStream());
 		sendUsername();
