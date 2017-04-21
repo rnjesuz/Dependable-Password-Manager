@@ -25,6 +25,8 @@ public class Client {
 	static Key privKey;
 	static Key serverPubKey;
 	static Socket clientSocket = null;
+	ArrayList<SecretKey> sessionKeys = new ArrayList<SecretKey>();
+	ArrayList<IvParameterSpec> ivs = new ArrayList<IvParameterSpec>();
 	ArrayList<Socket> sockets = new ArrayList<Socket>();
 	ArrayList<DataOutputStream> outs = new ArrayList<DataOutputStream>();
 	ArrayList<DataInputStream> ins = new ArrayList<DataInputStream>();
@@ -210,14 +212,34 @@ public class Client {
 		byte[] cipherSig = Arrays.copyOfRange(inputByte, msgLenght, lenght);
 		byte[] msg = decrypt(cipherMsg, privKey);
 		byte[] sig = decrypt(cipherSig, privKey);
+		byte[] sigPart;
 		
 		inputByte = new byte[256];
 		for(DataInputStream in : ins){
 			in.readFully(inputByte, 0, 256);
+			
+			System.out.println("DEBUG: " + 2);
+			sigPart = decrypt(inputByte, privKey);
+			sig = concatenate(sig, sigPart);
+			
+			if (!verifySignature(sig, msg)) {
+				System.out.println("Signature not verified, username not registered");
+				for(DataOutputStream out : outs){
+					out.close();
+				}
+				
+				for(DataInputStream i : ins){
+					i.close();
+				}
+				
+				return;
+			}
+			sessionKey = new SecretKeySpec(msg, 0, 16, "AES");
+			sessionKeys.add(sessionKey);
 		}
 		
 		
-		System.out.println("DEBUG: " + 2);
+		/*System.out.println("DEBUG: " + 2);
 		byte[] sigPart = decrypt(inputByte, privKey);
 		sig = concatenate(sig, sigPart);
 		
@@ -233,7 +255,7 @@ public class Client {
 			
 			return;
 		}
-		sessionKey = new SecretKeySpec(msg, 0, 16, "AES");
+		sessionKey = new SecretKeySpec(msg, 0, 16, "AES");*/
 		
 
 		for(DataInputStream in : ins){
@@ -257,10 +279,28 @@ public class Client {
 		
 		for(DataInputStream in : ins){
 			in.readFully(inputByte, 0, 256);
+			
+			System.out.println("DEBUG: " + 2);
+			sigPart = decrypt(inputByte, privKey);
+			sig = concatenate(sig, sigPart);
+			
+			if (!verifySignature(sig, msg)) {
+				System.out.println("Signature not verified, username not registered");
+				for(DataOutputStream out : outs){
+					out.close();
+				}
+				
+				for(DataInputStream i : ins){
+					i.close();
+				}
+				return;
+			}
+			iv = new IvParameterSpec(msg);
+			ivs.add(iv);
 		}
 		
 		
-		System.out.println("DEBUG: " + 2);
+		/*System.out.println("DEBUG: " + 2);
 		sigPart = decrypt(inputByte, privKey);
 		sig = concatenate(sig, sigPart);
 		
@@ -275,7 +315,7 @@ public class Client {
 			}
 			return;
 		}
-		iv = new IvParameterSpec(msg);
+		iv = new IvParameterSpec(msg);*/
 	}
 
 	public void askServerClock() throws IOException {
