@@ -20,6 +20,7 @@ public class Server {
         boolean listeningSocket = true;
         try {
             serverSocket = new ServerSocket(Integer.parseInt(args[0]));
+            new File(args[0]).mkdir();
           System.out.println(serverSocket.getLocalPort());
         } catch (IOException e) {
             System.err.println("Could not listen on port");
@@ -33,7 +34,7 @@ public class Server {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-            ServerThread thread = new ServerThread(clientSocket);
+            ServerThread thread = new ServerThread(clientSocket, Integer.parseInt(args[0]));
             thread.start();
         }
         try {

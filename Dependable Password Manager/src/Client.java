@@ -5,6 +5,7 @@ import java.nio.ByteBuffer;
 import java.security.*;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Random;
@@ -24,14 +25,28 @@ public class Client {
 	static Key privKey;
 	static Key serverPubKey;
 	static Socket clientSocket = null;
+	ArrayList<Socket> sockets = new ArrayList<Socket>();
+	ArrayList<DataOutputStream> outs = new ArrayList<DataOutputStream>();
+	ArrayList<DataInputStream> ins = new ArrayList<DataInputStream>();
 	static String username = null;
 	static String password = null;
 
 	public Client(String username, String password) throws IOException, UnknownHostException {
 		Random rand = new Random();
-		clientSocket = new Socket("localhost", rand.nextInt((8083 - 8080) + 1) + 8080);
-		out = new DataOutputStream(clientSocket.getOutputStream());
-		in = new DataInputStream(clientSocket.getInputStream());
+		//clientSocket = new Socket("localhost", rand.nextInt((8084 - 8080) + 1) + 8080);
+		for(int i = 8080; i <= 8084; i++){
+			sockets.add(new Socket("localhost", i));
+		}
+		System.out.println(sockets.size());
+		for(Socket s : sockets){
+			outs.add(new DataOutputStream(s.getOutputStream()));
+			ins.add(new DataInputStream(s.getInputStream()));
+		}
+		System.out.println(outs.size());
+		System.out.println(ins.size());
+		
+		//out = new DataOutputStream(clientSocket.getOutputStream());
+		//in = new DataInputStream(clientSocket.getInputStream());
 		sendUsername();
 		askServerClock();
 	}
@@ -122,7 +137,7 @@ public class Client {
 					break;
 
 				case "close":
-					close();
+					client.close();
 					return;
 				default:
 					System.out.println("Invalid Command");
@@ -135,9 +150,12 @@ public class Client {
 		}
 	}
 
-	public static void close() throws IOException {
+	public void close() throws IOException {
 		System.out.println("Closing connection...");
-		clientSocket.close();
+		//clientSocket.close();
+		for(Socket s : sockets){
+			s.close();
+		}
 	}
 
 	@SuppressWarnings("null")
@@ -148,29 +166,45 @@ public class Client {
 		
 		
 		bb.putInt(pubKey.getEncoded().length);
-		clientSocket.getOutputStream().write(bb.array());
-		clientSocket.getOutputStream().write(pubKey.getEncoded());
+		/*clientSocket.getOutputStream().write(bb.array());
+		clientSocket.getOutputStream().write(pubKey.getEncoded());*/
+		
+		for(Socket s : sockets){
+			s.getOutputStream().write(bb.array());
+			s.getOutputStream().write(pubKey.getEncoded());
+		}
 
-		out.flush();
+		//out.flush();
 
 		byte[] msgSign1= encrypt(username.getBytes("UTF-8"), getServerKey());
 		byte[] sig0= signature(username.getBytes("UTF-8"));
 		byte[] sigPart1 = encrypt(Arrays.copyOfRange(sig0, 0, (sig0.length/2)), getServerKey());
 		byte[] sigPart2 = encrypt(Arrays.copyOfRange(sig0, (sig0.length/2), sig0.length), getServerKey());
 		toSend= concatenate(msgSign1, sigPart1);
-		out.writeInt(toSend.length);
-		out.writeInt(msgSign1.length);
-		out.write(toSend);
-		out.flush();
-		System.out.println("DEBUG: " + sigPart2.length);
-		out.write(sigPart2);
 		
-
-		int lenght = in.readInt();
-		int msgLenght = in.readInt();
+		for(DataOutputStream out : outs){
+			out.flush();
+			out.writeInt(toSend.length);
+			out.writeInt(msgSign1.length);
+			out.write(toSend);
+			out.flush();
+			System.out.println("DEBUG0: " + sigPart2.length);
+			out.write(sigPart2);
+		}
+		
+		int lenght = 0;
+		int msgLenght = 0;
+		for(DataInputStream in : ins){
+			lenght = in.readInt();
+			msgLenght = in.readInt();
+		}
+		
 		byte[] inputByte = new byte[lenght];
+		for(DataInputStream in : ins){
+			in.readFully(inputByte, 0, lenght);
+		}
 		
-		in.readFully(inputByte, 0, lenght);
+		
 		System.out.println("DEBUG: " + 1);
 		byte[] cipherMsg = Arrays.copyOfRange(inputByte, 0, msgLenght);
 		byte[] cipherSig = Arrays.copyOfRange(inputByte, msgLenght, lenght);
@@ -178,25 +212,41 @@ public class Client {
 		byte[] sig = decrypt(cipherSig, privKey);
 		
 		inputByte = new byte[256];
-		in.readFully(inputByte, 0, 256);
+		for(DataInputStream in : ins){
+			in.readFully(inputByte, 0, 256);
+		}
+		
+		
 		System.out.println("DEBUG: " + 2);
 		byte[] sigPart = decrypt(inputByte, privKey);
 		sig = concatenate(sig, sigPart);
 		
 		if (!verifySignature(sig, msg)) {
 			System.out.println("Signature not verified, username not registered");
-			out.close();
-			in.close();
+			for(DataOutputStream out : outs){
+				out.close();
+			}
+			
+			for(DataInputStream in : ins){
+				in.close();
+			}
+			
 			return;
 		}
 		sessionKey = new SecretKeySpec(msg, 0, 16, "AES");
 		
 
-		lenght = in.readInt();
-		msgLenght = in.readInt();
+		for(DataInputStream in : ins){
+			lenght = in.readInt();
+			msgLenght = in.readInt();
+		}
+		
 		inputByte = new byte[lenght];
 		
-		in.readFully(inputByte, 0, lenght);
+		for(DataInputStream in : ins){
+			in.readFully(inputByte, 0, lenght);
+		}
+		
 		System.out.println("DEBUG: " + 1);
 		cipherMsg = Arrays.copyOfRange(inputByte, 0, msgLenght);
 		cipherSig = Arrays.copyOfRange(inputByte, msgLenght, lenght);
@@ -204,15 +254,25 @@ public class Client {
 		sig = decrypt(cipherSig, privKey);
 		
 		inputByte = new byte[256];
-		in.readFully(inputByte, 0, 256);
+		
+		for(DataInputStream in : ins){
+			in.readFully(inputByte, 0, 256);
+		}
+		
+		
 		System.out.println("DEBUG: " + 2);
 		sigPart = decrypt(inputByte, privKey);
 		sig = concatenate(sig, sigPart);
 		
 		if (!verifySignature(sig, msg)) {
 			System.out.println("Signature not verified, username not registered");
-			out.close();
-			in.close();
+			for(DataOutputStream out : outs){
+				out.close();
+			}
+			
+			for(DataInputStream in : ins){
+				in.close();
+			}
 			return;
 		}
 		iv = new IvParameterSpec(msg);
@@ -221,10 +281,19 @@ public class Client {
 	public void askServerClock() throws IOException {
 
 		System.out.println("Asking for Challenge-Response");
-		int msgLength = in.readInt();
-		int length = in.readInt();
+		int msgLength = 0;
+		int length = 0;
+		for(DataInputStream in : ins){
+			length = in.readInt();
+			msgLength = in.readInt();
+		}
+		
 		byte[] inputByte = new byte[length];
-		in.readFully(inputByte, 0, length);
+		for(DataInputStream in : ins){
+			in.readFully(inputByte, 0, length);
+			System.out.println(length);
+		}
+		
 		byte[]decipherInput = sessionDecrypt(sessionKey, iv, inputByte);
 		byte[]msg = Arrays.copyOfRange(decipherInput, 0, msgLength);
 		byte[]sig = Arrays.copyOfRange(decipherInput, msgLength, decipherInput.length);

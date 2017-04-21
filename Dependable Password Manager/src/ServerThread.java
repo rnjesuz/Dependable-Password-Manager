@@ -46,14 +46,16 @@ public class ServerThread extends Thread {
 	static Key pubKey;
 	DataOutputStream out;
 	int counter = 1 + (int)(Math.random() * 100000);
+	int _port;
 
-	public ServerThread(Socket socket) {
+	public ServerThread(Socket socket, int port) {
 
 		super("MiniServer");
 		this.socket = socket;
 		privKey = getServerKey("priv");
 		pubKey = getServerKey("pub");
-
+		_port = port;
+		
 	}
 
 	public void run() {
@@ -448,7 +450,7 @@ public class ServerThread extends Thread {
 	public void register(Key publicKey, byte[] signature) {
 		// dir.mkdir();
 		// File file = new File(clientUsername + File.separator + "publicKey");
-		File dir = new File(clientUsername);
+		File dir = new File(Integer.toString(_port) + File.separator + clientUsername);
 		if (dir.mkdir()) {
 		} else {
 			System.out.println("User already registered");
@@ -457,7 +459,7 @@ public class ServerThread extends Thread {
 		String key = DatatypeConverter.printHexBinary(publicKey.getEncoded());
 		FileOutputStream keyfos;
 		try {
-			keyfos = new FileOutputStream(clientUsername + File.separator + "publicKey");
+			keyfos = new FileOutputStream(Integer.toString(_port) + File.separator + clientUsername+ File.separator + "publicKey");
 			keyfos.write(key.getBytes());
 			keyfos.write(signature);
 
@@ -504,7 +506,7 @@ public class ServerThread extends Thread {
 			
 			String filename = hexString.toString().toUpperCase();
 
-			FileOutputStream fos = new FileOutputStream(clientUsername + File.separator + filename);
+			FileOutputStream fos = new FileOutputStream(Integer.toString(_port) + File.separator + clientUsername + File.separator + filename);
 
 			System.out.println("################################################");
 			System.out.println("Saving password with code of client "  + clientUsername);
@@ -550,8 +552,8 @@ public class ServerThread extends Thread {
 		String _username = new String(username, "UTF-8");*/
 		String filename = hexString.toString().toUpperCase();
 
-		File file = new File(clientUsername + File.separator + filename);
-		File dir = new File(clientUsername);
+		File file = new File(Integer.toString(_port) + File.separator + clientUsername+ File.separator + filename);
+		File dir = new File(Integer.toString(_port) + File.separator + clientUsername);
 		for (File f : dir.listFiles()) {
 			if (f.getName().equalsIgnoreCase(filename)) {
 				FileInputStream fis = new FileInputStream(file);
@@ -594,7 +596,7 @@ public class ServerThread extends Thread {
 			 * scan.next(); scan.close();
 			 */
 
-			File file = new File(clientUsername + File.separator + "publicKey");
+			File file = new File(Integer.toString(_port) + File.separator + clientUsername + File.separator + "publicKey");
 			FileInputStream fis = new FileInputStream(file);
 			byte[] outputbytes = new byte[fis.available() - signature.length];
 			fis.read(outputbytes);

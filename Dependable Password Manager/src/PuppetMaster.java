@@ -16,7 +16,7 @@ public class PuppetMaster {
 		try {
 			for (int i=0; i<=serverAmmount; i++){
 				String port = "808" + Integer.toString(i);
-				String[] aux ={"cmd.exe", "/c", "start", "cmd.exe", "/k", "java", "Server", port};
+				String[] aux ={"cmd.exe", "/c", "start", "java", "Server", port};
 				Process p = Runtime.getRuntime().exec(aux);
 			}
 		}catch (IOException e) {
