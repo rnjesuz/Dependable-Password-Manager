@@ -198,45 +198,51 @@ public class Client {
 		int msgLenght = 0;
 		for(DataInputStream in : ins){
 			lenght = in.readInt();
+			
 			msgLenght = in.readInt();
 		}
 		
 		byte[] inputByte = new byte[lenght];
+		byte[] cipherMsg;
+		byte[] cipherSig;
+		byte[] msg;
+		byte[] sig;
+		byte[] sigPart;;
 		for(DataInputStream in : ins){
+			System.out.println("DEBUG0: " + lenght);
 			in.readFully(inputByte, 0, lenght);
+
+			System.out.println("DEBUG: " + 1);
+			cipherMsg = Arrays.copyOfRange(inputByte, 0, msgLenght);
+			cipherSig = Arrays.copyOfRange(inputByte, msgLenght, lenght);
+			msg = decrypt(cipherMsg, privKey);
+			sig = decrypt(cipherSig, privKey);
+			
+			inputByte = new byte[256];
+
+				in.readFully(inputByte, 0, 256);
+				
+				System.out.println("DEBUG: " + 2);
+				sigPart = decrypt(inputByte, privKey);
+				sig = concatenate(sig, sigPart);
+				
+				if (!verifySignature(sig, msg)) {
+					System.out.println("Signature not verified, username not registered");
+					for(DataOutputStream out : outs){
+						out.close();
+					}
+					
+					for(DataInputStream inn : ins){
+						inn.close();
+					}
+					
+					return;
+				}
+				sessionKey = new SecretKeySpec(msg, 0, 16, "AES");
+				sessionKeys.add(sessionKey);
 		}
 		
 		
-		System.out.println("DEBUG: " + 1);
-		byte[] cipherMsg = Arrays.copyOfRange(inputByte, 0, msgLenght);
-		byte[] cipherSig = Arrays.copyOfRange(inputByte, msgLenght, lenght);
-		byte[] msg = decrypt(cipherMsg, privKey);
-		byte[] sig = decrypt(cipherSig, privKey);
-		byte[] sigPart;
-		
-		inputByte = new byte[256];
-		for(DataInputStream in : ins){
-			in.readFully(inputByte, 0, 256);
-			
-			System.out.println("DEBUG: " + 2);
-			sigPart = decrypt(inputByte, privKey);
-			sig = concatenate(sig, sigPart);
-			
-			if (!verifySignature(sig, msg)) {
-				System.out.println("Signature not verified, username not registered");
-				for(DataOutputStream out : outs){
-					out.close();
-				}
-				
-				for(DataInputStream i : ins){
-					i.close();
-				}
-				
-				return;
-			}
-			sessionKey = new SecretKeySpec(msg, 0, 16, "AES");
-			sessionKeys.add(sessionKey);
-		}
 		
 		
 		/*System.out.println("DEBUG: " + 2);
@@ -267,37 +273,37 @@ public class Client {
 		
 		for(DataInputStream in : ins){
 			in.readFully(inputByte, 0, lenght);
-		}
-		
-		System.out.println("DEBUG: " + 1);
-		cipherMsg = Arrays.copyOfRange(inputByte, 0, msgLenght);
-		cipherSig = Arrays.copyOfRange(inputByte, msgLenght, lenght);
-		msg = decrypt(cipherMsg, privKey);
-		sig = decrypt(cipherSig, privKey);
-		
-		inputByte = new byte[256];
-		
-		for(DataInputStream in : ins){
-			in.readFully(inputByte, 0, 256);
 			
-			System.out.println("DEBUG: " + 2);
-			sigPart = decrypt(inputByte, privKey);
-			sig = concatenate(sig, sigPart);
+			System.out.println("DEBUG: " + 1);
+			cipherMsg = Arrays.copyOfRange(inputByte, 0, msgLenght);
+			cipherSig = Arrays.copyOfRange(inputByte, msgLenght, lenght);
+			msg = decrypt(cipherMsg, privKey);
+			sig = decrypt(cipherSig, privKey);
 			
-			if (!verifySignature(sig, msg)) {
-				System.out.println("Signature not verified, username not registered");
-				for(DataOutputStream out : outs){
-					out.close();
-				}
+			inputByte = new byte[256];
+			
+				in.readFully(inputByte, 0, 256);
 				
-				for(DataInputStream i : ins){
-					i.close();
+				System.out.println("DEBUG: " + 2);
+				sigPart = decrypt(inputByte, privKey);
+				sig = concatenate(sig, sigPart);
+				
+				if (!verifySignature(sig, msg)) {
+					System.out.println("Signature not verified, username not registered");
+					for(DataOutputStream out : outs){
+						out.close();
+					}
+					
+					for(DataInputStream inn : ins){
+						inn.close();
+					}
+					return;
 				}
-				return;
-			}
-			iv = new IvParameterSpec(msg);
-			ivs.add(iv);
+				iv = new IvParameterSpec(msg);
+				ivs.add(iv);
 		}
+		
+		
 		
 		
 		/*System.out.println("DEBUG: " + 2);
@@ -329,21 +335,25 @@ public class Client {
 		}
 		
 		byte[] inputByte = new byte[length];
+		byte[]decipherInput;
+		byte[]msg;
+		byte[]sig;
 		for(DataInputStream in : ins){
 			in.readFully(inputByte, 0, length);
 			System.out.println(length);
+			decipherInput = sessionDecrypt(sessionKey, iv, inputByte);
+			msg = Arrays.copyOfRange(decipherInput, 0, msgLength);
+			sig = Arrays.copyOfRange(decipherInput, msgLength, decipherInput.length);
+			
+			if (!verifySignature(sig, msg)) {
+				System.out.println("Signature not verified, no action taken");
+				return;
+			}
+			counter = Integer.parseInt(new String(msg, "UTF-8"));
+			System.out.println("Challenge-Response: " + counter);
 		}
 		
-		byte[]decipherInput = sessionDecrypt(sessionKey, iv, inputByte);
-		byte[]msg = Arrays.copyOfRange(decipherInput, 0, msgLength);
-		byte[]sig = Arrays.copyOfRange(decipherInput, msgLength, decipherInput.length);
 		
-		if (!verifySignature(sig, msg)) {
-			System.out.println("Signature not verified, no action taken");
-			return;
-		}
-		counter = Integer.parseInt(new String(msg, "UTF-8"));
-		System.out.println("Challenge-Response: " + counter);
 	}
 
 	public static void init(KeyStore ks, String username, String password) throws WrongPasswordException {
