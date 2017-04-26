@@ -138,6 +138,7 @@ public class ServerThread extends Thread {
 			byte[] sigPart1 = encrypt(Arrays.copyOfRange(sig0, 0, (sig0.length/2)), k);
 			byte[] sigPart2 = encrypt(Arrays.copyOfRange(sig0, (sig0.length/2), sig0.length), k);
 			byte[] sessionCipher= concatenate(msgSign1, sigPart1);
+			System.out.println("AHHHHHHHHHHHHHHH " + sessionCipher.length);
 			out.writeInt(sessionCipher.length);
 			out.writeInt(msgSign1.length);
 			out.write(sessionCipher);
@@ -166,7 +167,7 @@ public class ServerThread extends Thread {
 			byte[] toSend = sessionEncrypt(sessionKey, iv , msgSign);// Cipher
 			out.writeInt(toSend.length);// Sends total length
 			out.write(toSend);// Sends {MSG+SIG}serverpubkey
-			System.out.println("Challenge Response send");
+			System.out.println("Challenge Response send " + counter);
 
 //============================================================================================================================================			
 			while (socket.isConnected()) {
@@ -682,7 +683,9 @@ public class ServerThread extends Thread {
 	}
 
 	public int calculateCounter() {
-		// System.out.println(counter);
+		System.out.println("NEW COUNTER: " + (counter+42));
+		
+		
 		return counter + 42;
 	}
 
