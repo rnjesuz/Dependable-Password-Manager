@@ -220,7 +220,7 @@ public class Client {
 			
 			inputByte = new byte[256];
 
-				in.readFully(inputByte, 0, 256);
+				in.readFully(inputByte, 0, lenght);
 				
 				System.out.println("DEBUG: " + 2);
 				sigPart = decrypt(inputByte, privKey);
