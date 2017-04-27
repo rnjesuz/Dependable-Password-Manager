@@ -24,6 +24,7 @@ import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.zip.Deflater;
@@ -45,8 +46,13 @@ public class ServerThread extends Thread {
 	static Key privKey;
 	static Key pubKey;
 	DataOutputStream out;
+	DataInputStream in;
 	int counter = 1 + (int)(Math.random() * 100000);
 	int _port;
+	
+	//for (1,n) regular
+	int wts = 0;
+	int c_wts = 0;
 
 	public ServerThread(Socket socket, int port) {
 
@@ -63,7 +69,7 @@ public class ServerThread extends Thread {
 		try {
 			out = new DataOutputStream(this.socket.getOutputStream());
 
-			DataInputStream in = new DataInputStream(socket.getInputStream());
+			in = new DataInputStream(socket.getInputStream());
 			
 			// checking for username
 //============================================================================================================================================
@@ -80,6 +86,8 @@ public class ServerThread extends Thread {
 			byte[] sigPart;
 			byte[] cipherSig;
 			Key k;
+			
+			ArrayList<byte[]> output;
 			
 			k = receivePublicKey();
 
@@ -213,7 +221,7 @@ public class ServerThread extends Thread {
 				switch (input) {
 
 				case "register":
-					msgLenght = in.readInt();
+					/*msgLenght = in.readInt();
 					crLength = in.readInt();
 					msgCrLength = in.readInt();
 					lenght = in.readInt();
@@ -235,21 +243,60 @@ public class ServerThread extends Thread {
 						System.out.println("Challenge Response failed");
 						break;
 					}
-					counter = proposedCounter;
+					counter = proposedCounter;*/
+					
+					/*	
+						System.out.println("################################################");
+						System.out.println("RECEIVED MSG:");
+						System.out.println(new String(output.get(2), "UTF-8"));
+						System.out.println("================================================");
+						System.out.println("DECRYPTED MSG:");
+						System.out.println(new String(output.get(0), "UTF-8"));
+						System.out.println("================================================");
+						System.out.println("SIGNATURE:");
+						System.out.println(new String(output.get(1), "UTF-8"));
+						System.out.println("################################################");
+						System.out.println("");
+				
+						msgLenght = in.readInt();
+						crLength = in.readInt();
+						msgCrLength = in.readInt();
+						lenght = in.readInt();
+						inputByte = new byte[lenght];
+						in.readFully(inputByte, 0, lenght);
+						decipherInput = sessionDecrypt(sessionKey, iv, inputByte);
+						msg = Arrays.copyOfRange(decipherInput, 0, msgCrLength);
+						sig = Arrays.copyOfRange(decipherInput, msgCrLength, decipherInput.length);
+						
+						if (!verifySignature(k, sig, msg)) {
+							System.out.println("Signature not verified, no action taken");
+							break;
+						}
+						counterBytes = Arrays.copyOfRange(msg, 0, crLength);
+						msg = Arrays.copyOfRange(msg, crLength, msgCrLength);
+						proposedCounter = Integer.parseInt(new String(counterBytes, "UTF-8"));
+						
+						if (proposedCounter != calculateCounter()) {
+							System.out.println("Challenge Response failed");
+							break;
+						}
+						counter = proposedCounter;*/
+						
+						output = msgRefactor(k);
 						
 						System.out.println("################################################");
 						System.out.println("RECEIVED MSG:");
-						System.out.println(new String(inputByte, "UTF-8"));
+						System.out.println(new String(output.get(2), "UTF-8"));
 						System.out.println("================================================");
 						System.out.println("DECRYPTED MSG:");
-						System.out.println(new String(msg, "UTF-8"));
+						System.out.println(new String(output.get(0), "UTF-8"));
 						System.out.println("================================================");
 						System.out.println("SIGNATURE:");
-						System.out.println(new String(sig, "UTF-8"));
+						System.out.println(new String(output.get(1), "UTF-8"));
 						System.out.println("################################################");
 						System.out.println("");
 
-						register(receivePublicKey(), sig);
+						register(receivePublicKey(), output.get(1));
 
 					break;
 
@@ -446,6 +493,39 @@ public class ServerThread extends Thread {
 			e.printStackTrace();
 			return;
 		}
+	}
+	
+	public ArrayList<byte[]> msgRefactor(Key k) throws IOException {
+		int crLength = in.readInt();
+		int msgCrLength = in.readInt();
+		int lenght = in.readInt();
+		byte[] inputByte = new byte[lenght];
+		in.readFully(inputByte, 0, lenght);
+		byte[] decipherInput = sessionDecrypt(sessionKey, iv, inputByte);
+		byte[] msg = Arrays.copyOfRange(decipherInput, 0, msgCrLength);
+		byte[] sig = Arrays.copyOfRange(decipherInput, msgCrLength, decipherInput.length);
+		
+		if (!verifySignature(k, sig, msg)) {
+			System.out.println("Signature not verified, no action taken");
+			return null;
+		}
+		
+		byte[] counterBytes = Arrays.copyOfRange(msg, 0, crLength);
+		msg = Arrays.copyOfRange(msg, crLength, msgCrLength);
+		int proposedCounter = Integer.parseInt(new String(counterBytes, "UTF-8"));
+		
+		if (proposedCounter != calculateCounter()) {
+			System.out.println("Challenge Response failed");
+			return null;
+		}
+		counter = proposedCounter;
+		
+		ArrayList<byte[]> output = new ArrayList<byte[]>();
+		output.add(msg);
+		output.add(sig);
+		output.add(inputByte);
+		
+		return output;
 	}
 
 	public void register(Key publicKey, byte[] signature) {

@@ -33,6 +33,10 @@ public class Client {
 	ArrayList<Integer> counters = new ArrayList<Integer>();
 	static String username = null;
 	static String password = null;
+	
+	//for (1,n) regular
+	int wts = 0;
+	int acks = 0;
 
 	public Client(String username, String password) throws IOException, UnknownHostException {
 		Random rand = new Random();
@@ -510,7 +514,7 @@ public class Client {
 			System.out.println("Request Sent");
 	
 			
-			System.out.println("=============================================================");
+			/*System.out.println("=============================================================");
 			System.out.println("Sending username: " + username);
 			out.writeInt(username.getBytes("UTF-8").length);// Sends length of
 															// msg
@@ -530,13 +534,34 @@ public class Client {
 			System.out.println("Ciphering username, using server public key");
 			System.out.println("=============================================================");
 			//toSend = encrypt(msgSign, getServerKey());// Cipher
+			
 			toSend = sessionEncrypt(sk, iv , msgSign);
 			System.out.println("Ciphered signed username: " + (new String(toSend)));
 			out.writeInt(toSend.length);// Sends total length
 			out.write(toSend);// Sends {MSG+SIG}serverpubkey
 			System.out.println("Username Sent");
 	
-			System.out.println("=============================================================");
+			System.out.println("=============================================================");*/
+			
+			wts += 1;
+			byte[] wtsBytes = Integer.toString(wts).getBytes("UTF-8");
+			
+			counters.set(i, calculateCounter(counters.get(i)));
+			challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
+			cr = challengeResponse.length;
+			out.writeInt(cr);
+			
+			msg = concatenate(challengeResponse, wtsBytes);
+			out.writeInt(msg.length);
+			System.out.println("Signing Request with Client Private Key");
+			
+			msgSign = concatenate(msg, signature(msg));// creates
+			
+			toSend = sessionEncrypt(sk, iv , msgSign);
+
+			out.writeInt(toSend.length);// Sends total length
+			out.write(toSend);// Sends {MSG+SIG}serverpubkey
+			
 			s.getOutputStream().write(bb.array());
 			s.getOutputStream().write(pubKey.getEncoded());
 			s.getOutputStream().flush();
