@@ -19,7 +19,7 @@ public class Client {
 	DataOutputStream out;
 	DataInputStream in;
 	int counter;
-	static Key pubKey;
+	static Key pubKey; //JESUS PLS
 	static SecretKey sessionKey;
 	static IvParameterSpec iv;
 	static Key privKey;
