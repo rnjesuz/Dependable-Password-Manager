@@ -31,6 +31,8 @@ public class Client {
 	ArrayList<DataOutputStream> outs = new ArrayList<DataOutputStream>();
 	ArrayList<DataInputStream> ins = new ArrayList<DataInputStream>();
 	ArrayList<Integer> counters = new ArrayList<Integer>();
+	ArrayList<Integer> correctionServers = new ArrayList<Integer>();
+	ArrayList<Integer> faultyServers = new ArrayList<Integer>();
 	static String username = null;
 	static String password = null;
 	
@@ -107,12 +109,12 @@ public class Client {
 					
 					if(client.acknowledge()) {
 						System.out.println("=============================================================");
-						System.out.println("PASSWORD SAVED");
+						System.out.println("REGISTERED");
 						System.out.println("=============================================================");
 					}
 					else {
 						System.out.println("=============================================================");
-						System.out.println("PASSWORD NOT SAVED IN SERVERS, TRY AGAIN");
+						System.out.println("NOT REGISTERED, TRY AGAIN");
 						System.out.println("=============================================================");
 					}
 
@@ -137,11 +139,20 @@ public class Client {
 						System.out.println("=============================================================");
 						System.out.println("PASSWORD SAVED");
 						System.out.println("=============================================================");
+						
 					}
 					else {
 						System.out.println("=============================================================");
 						System.out.println("PASSWORD NOT SAVED IN SERVERS, TRY AGAIN");
 						System.out.println("=============================================================");
+					}
+					
+					for(int i = 0; i < client.correctionServers.size(); i++){
+						DataOutputStream out = client.outs.get(i);
+						out.writeInt(1);
+					}for(int i = 0; i < client.faultyServers.size(); i++){
+						DataOutputStream out = client.outs.get(i);
+						out.writeInt(0);
 					}
 					
 					break;
@@ -182,7 +193,7 @@ public class Client {
 	}
 	
 	public boolean acknowledge() throws IOException {
-
+		acks = 0;
 		for(int i = 0; i < N; i++) {
 			DataInputStream in = ins.get(i);
 			int wtsLength = in.readInt();
@@ -206,16 +217,24 @@ public class Client {
 			if(wts != proposedWts){
 				System.out.println(wts);
 				System.out.println(proposedWts);
-				System.out.println("queima");
 				System.out.println("something's not right with wts");
+				faultyServers.add(i);
 			}else if(!((new String(msg, "UTF-8")).equals("ack"))){
 				System.out.println("something's not right with wts");
-			} else acks += 1;
+				faultyServers.add(i);
+			} else{ 
+				correctionServers.add(i);
+				acks += 1;
+				}
 		}
 		
 		if(acks > (N/2)) {
+			//we  have consensus
 			return true;
-		} else return false;
+		} else {
+			//no consensus found
+			return false;
+		}
 	}
 	
 

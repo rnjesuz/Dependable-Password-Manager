@@ -50,6 +50,7 @@ public class ServerThread extends Thread {
 	DataInputStream in;
 	int counter = 1 + (int)(Math.random() * 100000);
 	int _port;
+	byte[] lastPassSaved = null;
 	
 	//for (1,n) regular
 	int wts = 0;
@@ -302,12 +303,17 @@ public class ServerThread extends Thread {
 
 						//for 1,n regular
 						c_wts = Integer.parseInt(new String(counterBytes, "UTF-8"));
+						String name = null;
 						if(c_wts > wts) {
-							put(getPublicKey(sig), putDomain, putUsername, putPass, sig);
+							name = put(getPublicKey(sig), putDomain, putUsername, putPass, sig);
 							wts=c_wts;
 						} else System.out.println("shit");
 						
 						sendACK();
+						int writeBack = in.readInt();
+						if(writeBack == 1){
+							writeBack(name);
+						}
 						
 					break;
 
@@ -392,6 +398,27 @@ public class ServerThread extends Thread {
 		
 		return output;
 	}
+	
+	public void writeBack(String name){
+		
+		try {
+			if(lastPassSaved == null){
+				File f = new File(name);
+				f.delete();
+			}else{
+				FileOutputStream fos = new FileOutputStream(Integer.toString(_port) + File.separator + clientUsername + File.separator + name);
+				fos.write(lastPassSaved);
+				fos.close();
+			}
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+	}
 
 	public void register(Key publicKey, byte[] signature) {
 		// dir.mkdir();
@@ -424,7 +451,7 @@ public class ServerThread extends Thread {
 		}
 	}
 
-	public void put(Key publicKey, byte[] domain, byte[] username, byte[] password, byte[] signature) {
+	public String put(Key publicKey, byte[] domain, byte[] username, byte[] password, byte[] signature) {
 		try {
 			
 			StringBuilder hexString = new StringBuilder();
@@ -446,11 +473,16 @@ public class ServerThread extends Thread {
 			      hexString.append(hex);
 			  }
 			
-			/*String bar = "" + '#';
-			String _domain = new String(domain, "UTF-8");
-			String _username = new String(username, "UTF-8");*/
 			
 			String filename = hexString.toString().toUpperCase();
+			File f = new File(filename);
+			if(f.exists() && !f.isDirectory()) { 
+				FileInputStream fis = new FileInputStream(f);
+				lastPassSaved = new byte[fis.available()];
+				fis.read(lastPassSaved);
+				fis.close();
+			}
+			
 
 			FileOutputStream fos = new FileOutputStream(Integer.toString(_port) + File.separator + clientUsername + File.separator + filename);
 
@@ -464,11 +496,13 @@ public class ServerThread extends Thread {
 			fos.write(password);
 			fos.write(signature);
 			fos.close();
+			return filename;
 
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		return null;
 	}
 
 	public byte[] get(Key publicKey, byte[] domain, byte[] username, byte[] signature) throws Exception {
@@ -493,9 +527,6 @@ public class ServerThread extends Thread {
 		      hexString.append(hex);
 		  }
 
-		/*String bar = "" + '#';
-		String _domain = new String(domain, "UTF-8");
-		String _username = new String(username, "UTF-8");*/
 		String filename = hexString.toString().toUpperCase();
 
 		File file = new File(Integer.toString(_port) + File.separator + clientUsername+ File.separator + filename);
