@@ -33,6 +33,7 @@ public class Client {
 	ArrayList<Integer> counters = new ArrayList<Integer>();
 	ArrayList<Integer> correctionServers = new ArrayList<Integer>();
 	ArrayList<Integer> faultyServers = new ArrayList<Integer>();
+	ArrayList<String> receivedPasswords = new ArrayList<String>();
 	static String username = null;
 	static String password = null;
 	
@@ -168,6 +169,7 @@ public class Client {
 					getusername = hashCode(aa);
 
 					client.retrieve_password(getdomain, getusername);
+					client.readingConcensus();
 					break;
 
 				case "help":
@@ -192,6 +194,26 @@ public class Client {
 		}
 	}
 	
+	private void readingConcensus() {
+		int consensus = 0;
+		for(int i = 0; i < N; i++){
+			for(int j = 0; j < N; j++){
+				if(receivedPasswords.get(i).equals(receivedPasswords.get(j))){
+					consensus++;
+				}
+			}
+			if(consensus > (N/2)){
+				if(receivedPasswords.get(i).equals("NULL")){
+					System.out.println("No password stored under this domain/username");
+					return;
+					} else {
+						System.out.println("The password you requested: " + receivedPasswords.get(i));
+						return;
+					}
+			}	
+		}
+	}
+
 	public boolean acknowledge() throws IOException {
 		acks = 0;
 		for(int i = 0; i < N; i++) {
@@ -838,13 +860,15 @@ public class Client {
 					System.out.println("Signature not verified, operation aborted");
 					return;
 				}
+				
+				receivedPasswords.add(new String(decrypt(inputByte, privKey)));
 			}
 		
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		try {
+		/*try {
 			if (new String(inputByte, "UTF-8").equals("NULL")) {
 				System.out.println("No password stored under this domain/username");
 			} else {
@@ -853,7 +877,7 @@ public class Client {
 		} catch (UnsupportedEncodingException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}
+		}*/
 	}
 
 	public static Key getServerKey() {
