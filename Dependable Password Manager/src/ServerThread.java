@@ -10,6 +10,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyFactory;
@@ -52,17 +53,22 @@ public class ServerThread extends Thread {
 	int _port;
 	byte[] lastPassSaved = null;
 	
+	ArrayList<Socket> sockets = new ArrayList<Socket>();
+	ArrayList<DataOutputStream> outs = new ArrayList<DataOutputStream>();
+	ArrayList<DataInputStream> ins = new ArrayList<DataInputStream>();
+	
 	//for (1,n) regular
 	int wts = 0;
 	int c_wts = 0;
 
-	public ServerThread(Socket socket, int port) {
+	public ServerThread(Socket socket, int port) throws UnknownHostException, IOException {
 
 		super("MiniServer");
 		this.socket = socket;
 		privKey = getServerKey("priv");
 		pubKey = getServerKey("pub");
 		_port = port;
+		
 		
 	}
 
@@ -74,6 +80,22 @@ public class ServerThread extends Thread {
 			in = new DataInputStream(socket.getInputStream());
 			
 			// checking for username
+			for(int i = 8080; i <= 8084; i++){
+				if(i != _port){
+						sockets.add(new Socket("localhost", i));
+				System.out.println(_port + "    :    "+i);
+				}
+				}
+			System.out.println(sockets.size());
+			for(Socket s : sockets){
+				outs.add(new DataOutputStream(s.getOutputStream()));
+				ins.add(new DataInputStream(s.getInputStream()));
+			}
+			System.out.println(outs.size());
+			System.out.println(ins.size());
+			
+			
+			
 //============================================================================================================================================
 			int msgLenght;
 			int lenght;

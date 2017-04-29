@@ -40,7 +40,9 @@ public class Client {
 	//for (1,n) regular
 	int wts = 0;
 	int acks = 0;
-	int N = 5; //number of servers
+	static int N = 5; //number of servers
+	static int round = 0; //current command round
+	static int serverN = 0; //chossen server to be leader
 
 	public Client(String username, String password) throws IOException, UnknownHostException {
 		Random rand = new Random();
@@ -101,6 +103,11 @@ public class Client {
 
 				System.out.println("====Please type the desired command or type help for the list of commands====");
 				String command = System.console().readLine();
+				
+				// do round mod N = i to choose server to connect
+				//connected server is leader
+				serverN = round%N;
+				round++;
 				switch (command) {
 
 				case "register":
@@ -147,15 +154,7 @@ public class Client {
 						System.out.println("PASSWORD NOT SAVED IN SERVERS, TRY AGAIN");
 						System.out.println("=============================================================");
 					}
-					
-					for(int i = 0; i < client.correctionServers.size(); i++){
-						DataOutputStream out = client.outs.get(i);
-						out.writeInt(1);
-					}for(int i = 0; i < client.faultyServers.size(); i++){
-						DataOutputStream out = client.outs.get(i);
-						out.writeInt(0);
-					}
-					
+										
 					break;
 
 				case "get":
@@ -215,15 +214,14 @@ public class Client {
 	}
 
 	public boolean acknowledge() throws IOException {
-		acks = 0;
-		for(int i = 0; i < N; i++) {
-			DataInputStream in = ins.get(i);
+		
+			DataInputStream in = ins.get(serverN);
 			int wtsLength = in.readInt();
 			int msgWtsLength = in.readInt();
 			int lenght = in.readInt();
 			byte[] inputByte = new byte[lenght];
 			in.readFully(inputByte, 0, lenght);
-			byte[] decipherInput = sessionDecrypt(sessionKeys.get(i), ivs.get(i), inputByte);
+			byte[] decipherInput = sessionDecrypt(sessionKeys.get(serverN), ivs.get(serverN), inputByte);
 			byte[] msg = Arrays.copyOfRange(decipherInput, 0, msgWtsLength);
 			byte[] sig = Arrays.copyOfRange(decipherInput, msgWtsLength, decipherInput.length);
 			
@@ -237,26 +235,14 @@ public class Client {
 			int proposedWts = Integer.parseInt(new String(wtsBytes, "UTF-8"));
 			
 			if(wts != proposedWts){
-				System.out.println(wts);
-				System.out.println(proposedWts);
 				System.out.println("something's not right with wts");
-				faultyServers.add(i);
-			}else if(!((new String(msg, "UTF-8")).equals("ack"))){
-				System.out.println("something's not right with wts");
-				faultyServers.add(i);
+				return false;
+			}else	if(!((new String(msg, "UTF-8")).equals("ack"))){
+				System.out.println("Something went wrong");
+				return false;
 			} else{ 
-				correctionServers.add(i);
-				acks += 1;
-				}
-		}
-		
-		if(acks > (N/2)) {
-			//we  have consensus
-			return true;
-		} else {
-			//no consensus found
-			return false;
-		}
+				return true;
+			}
 	}
 	
 
@@ -595,8 +581,13 @@ public class Client {
 			System.out.println("=============================================================");
 			System.out.println("Sending request to register");
 			out.flush();
-			out.writeInt("register".getBytes("UTF-8").length);// Sends length of
-																// msg
+			if(i == serverN){
+				//is leader
+				out.writeInt("register".getBytes("UTF-8").length);// Sends length of
+			}else{
+				//is follower
+				out.writeInt("register_follow".getBytes("UTF-8").length);
+			}
 			counters.set(i, calculateCounter(counters.get(i)));
 			byte[] challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
 			int cr = challengeResponse.length;
@@ -644,19 +635,18 @@ public class Client {
 
 	public void save_password(byte[] domain, byte[] username, byte[] password) {
 		try {
-			wts += 1;
-			for(int i=0; i<sessionKeys.size(); i++){
-				SecretKey sk = sessionKeys.get(i);
-				IvParameterSpec iv = ivs.get(i);
-				DataOutputStream out = outs.get(i);
+			wts++;
+				SecretKey sk = sessionKeys.get(serverN);
+				IvParameterSpec iv = ivs.get(serverN);
+				DataOutputStream out = outs.get(serverN);
 			
 				System.out.println("=============================================================");
 				System.out.println("Sending request to save password");
 				out.flush();
 				out.writeInt("put".getBytes("UTF-8").length);// Sends length of msg
 				
-				counters.set(i, calculateCounter(counters.get(i)));
-				byte[] challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
+				counters.set(serverN, calculateCounter(counters.get(serverN)));
+				byte[] challengeResponse = Integer.toString(counters.get(serverN)).getBytes("UTF-8");
 				int cr = challengeResponse.length;
 				out.writeInt(cr);
 				byte[] msg = concatenate(challengeResponse, "put".getBytes("UTF-8"));
@@ -678,8 +668,8 @@ public class Client {
 				System.out.println("Sending domain: " + (new String(domain, "UTF-8")));
 				out.flush();
 				
-				counters.set(i, calculateCounter(counters.get(i)));
-				challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
+				counters.set(serverN, calculateCounter(counters.get(serverN)));
+				challengeResponse = Integer.toString(counters.get(serverN)).getBytes("UTF-8");
 				cr = challengeResponse.length;
 				out.writeInt(cr);
 				msg = concatenate(challengeResponse, domain);
@@ -702,8 +692,8 @@ public class Client {
 				System.out.println("Sending username: " + (new String(username, "UTF-8")));
 				out.flush();
 	
-				counters.set(i, calculateCounter(counters.get(i)));
-				challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
+				counters.set(serverN, calculateCounter(counters.get(serverN)));
+				challengeResponse = Integer.toString(counters.get(serverN)).getBytes("UTF-8");
 				cr = challengeResponse.length;
 				out.writeInt(cr);
 				msg = concatenate(challengeResponse, username);
@@ -734,8 +724,8 @@ public class Client {
 				
 				byte[] wtsBytes = Integer.toString(wts).getBytes("UTF-8");
 				
-				counters.set(i, calculateCounter(counters.get(i)));
-				challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
+				counters.set(serverN, calculateCounter(counters.get(serverN)));
+				challengeResponse = Integer.toString(counters.get(serverN)).getBytes("UTF-8");
 				cr = challengeResponse.length;
 				out.writeInt(cr);
 				
@@ -749,7 +739,7 @@ public class Client {
 
 				out.writeInt(toSend.length);// Sends total length
 				out.write(toSend);// Sends {MSG+SIG}serverpubkey
-			}
+		
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

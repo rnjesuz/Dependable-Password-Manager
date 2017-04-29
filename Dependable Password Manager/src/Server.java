@@ -1,6 +1,7 @@
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.UnknownHostException;
 
 public class Server {
 	
@@ -34,8 +35,12 @@ public class Server {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
+			try{
             ServerThread thread = new ServerThread(clientSocket, Integer.parseInt(args[0]));
             thread.start();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
         }
         try {
 			serverSocket.close();
