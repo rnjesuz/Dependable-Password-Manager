@@ -41,8 +41,8 @@ public class Client {
 	int wts = 0;
 	int acks = 0;
 	static int N = 5; // number of servers
-	static int round = 0; // current command round
-	static int serverN = 0; // chossen server to be leader
+	static int round = 1; // current command round
+	static int serverN = round % N;; // chosen server to be leader
 
 	public Client(String username, String password) throws IOException, UnknownHostException {
 		Random rand = new Random();
@@ -70,12 +70,27 @@ public class Client {
 		for (int i = 0; i < sessionKeys.size(); i++) {
 			out = outs.get(i);
 			SecretKey sk = sessionKeys.get(i);
-			byte[] msg = "client".getBytes("UTF-8");
-			byte[] msgSign = concatenate(msg, signature(msg));// creates MSG+SIG
+			byte[] msg = "ola".getBytes("UTF-8");
+			if(serverN == i){
+				msg = "lider".getBytes("UTF-8");
+			}else{
+				msg = "follower".getBytes("UTF-8");
+			}
+			
+			counters.set(i, calculateCounter(counters.get(i)));
+			byte[] challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
+			int cr = challengeResponse.length;
+			out.writeInt(cr);
+			byte[] msgCr = concatenate(challengeResponse, msg);
+			out.writeInt(msgCr.length);
+			System.out.println("Signing Request with Client Private Key");
+			byte[] msgSign = concatenate(msgCr, signature(msg));// creates
+																// MSG+SIG
 			byte[] toSend = sessionEncrypt(sk, iv, msgSign);// Cipher
-			System.out.println("Ciphered signed request: " + (new String(toSend)));
 			out.writeInt(toSend.length);// Sends total length
-			out.write(toSend);// Sends {MSG+SIG}serverpubkey
+			out.write(toSend);// Sends {MSG+SIG}serverpubkey			
+			//send 0 to flag we are client
+			out.writeInt(0);
 		}
 
 	}
@@ -122,8 +137,8 @@ public class Client {
 
 				// do round mod N = i to choose server to connect
 				// connected server is leader
-				serverN = round % N;
 				round++;
+				serverN = round % N;
 				switch (command) {
 
 				case "register":

@@ -52,6 +52,9 @@ public class ServerThread extends Thread {
 	int counter = 1 + (int) (Math.random() * 100000);
 	int _port;
 	byte[] lastPassSaved = null;
+	ArrayList<SecretKey> sessionKeys = new ArrayList<SecretKey>();
+	ArrayList<IvParameterSpec> ivs = new ArrayList<IvParameterSpec>();
+	ArrayList<Integer> counters = new ArrayList<Integer>();
 
 	ArrayList<Socket> sockets = new ArrayList<Socket>();
 	ArrayList<DataOutputStream> outs = new ArrayList<DataOutputStream>();
@@ -187,19 +190,7 @@ public class ServerThread extends Thread {
 
 			// ============================================================================================================================================
 
-			for (int i = 8080; i <= 8084; i++) {
-				if (i != _port) {
-					sockets.add(new Socket("localhost", i));
-					System.out.println(_port + "    :    " + i);
-				}
-			}
-			System.out.println(sockets.size());
-			for (Socket s : sockets) {
-				outs.add(new DataOutputStream(s.getOutputStream()));
-				ins.add(new DataInputStream(s.getInputStream()));
-			}
-			System.out.println(outs.size());
-			System.out.println(ins.size());
+			connectServerServer(k);
 
 			// =========================================================================
 			while (socket.isConnected()) {
@@ -390,6 +381,237 @@ public class ServerThread extends Thread {
 		}
 	}
 
+	private void connectServerServer(Key k) throws UnknownHostException, IOException {
+
+		int crLength = in.readInt();
+		int msgCrLength = in.readInt();
+		int lenght = in.readInt();
+		byte[] inputByte = new byte[lenght];
+		in.readFully(inputByte, 0, lenght);
+		int id = in.readInt();
+		byte[] decipherInput = sessionDecrypt(sessionKey, iv, inputByte);
+		byte[] msgCr = Arrays.copyOfRange(decipherInput, 0, msgCrLength);
+		byte[] cr = Arrays.copyOfRange(msgCr, 0, crLength);
+		byte[] msg = Arrays.copyOfRange(msgCr, crLength, msgCrLength);
+		byte[] sig = Arrays.copyOfRange(decipherInput, msgCrLength, decipherInput.length);
+
+		String tag = new String(msg, "UTF-8");
+		
+		System.out.println(tag);
+		
+		if(id==0){
+			//Uses Client Key
+			System.out.println("SOU UM CLIENTE");
+		} else{ 
+			//Uses Server Key
+				k = pubKey;
+				System.out.println("SOU UM SERVER");
+		}
+			
+		if (!verifySignature(k, sig, msg)) {
+			System.out.println("Signature not verified, no action taken");
+			return;
+		}
+		
+		if (tag.equals("lider")) {
+			for (int i = 8080; i <= 8084; i++) {
+				if (i != _port) {
+					sockets.add(new Socket("localhost", i));
+					System.out.println(_port + "    :    " + i);
+				}
+			}
+			System.out.println(sockets.size());
+			for (Socket s : sockets) {
+				outs.add(new DataOutputStream(s.getOutputStream()));
+				ins.add(new DataInputStream(s.getInputStream()));
+			}
+			System.out.println(outs.size());
+			System.out.println(ins.size());
+
+			sendUsername();
+			challengeResponse();
+			sendTag();
+		}
+	}
+	
+	private void sendTag() throws IOException{
+		for (int i = 0; i < sessionKeys.size(); i++) {
+			out = outs.get(i);
+			SecretKey sk = sessionKeys.get(i);
+			byte[] msg;
+			msg = "follower".getBytes("UTF-8");
+			
+			counters.set(i, calculateCounterServer(counters.get(i)));
+			byte[] challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
+			int cr = challengeResponse.length;
+			out.writeInt(cr);
+			msg = concatenate(challengeResponse, msg);
+			out.writeInt(msg.length);
+			System.out.println("Signing Request with Client Private Key");
+			byte[] msgSign = concatenate(msg, signature(msg));// creates
+																// MSG+SIG
+			byte[] toSend = sessionEncrypt(sk, iv, msgSign);// Cipher
+			out.writeInt(toSend.length);// Sends total length
+			out.write(toSend);// Sends {MSG+SIG}serverpubkey			
+			//send 0 to flag we are client
+			out.writeInt(1);
+		}
+	}
+
+	public void sendUsername() throws IOException {
+		byte[] msgSign;
+		byte[] toSend;
+		ByteBuffer bb = ByteBuffer.allocate(8);
+
+		bb.putInt(pubKey.getEncoded().length);
+		/*
+		 * clientSocket.getOutputStream().write(bb.array());
+		 * clientSocket.getOutputStream().write(pubKey.getEncoded());
+		 */
+
+		for (Socket s : sockets) {
+			s.getOutputStream().write(bb.array());
+			s.getOutputStream().write(pubKey.getEncoded());
+		}
+
+		// out.flush();
+
+		byte[] msgSign1 = encrypt("Server".getBytes("UTF-8"), pubKey);
+		byte[] sig0 = signature("Server".getBytes("UTF-8"));
+		byte[] sigPart1 = encrypt(Arrays.copyOfRange(sig0, 0, (sig0.length / 2)), pubKey);
+		byte[] sigPart2 = encrypt(Arrays.copyOfRange(sig0, (sig0.length / 2), sig0.length), pubKey);
+		toSend = concatenate(msgSign1, sigPart1);
+
+		for (DataOutputStream out : outs) {
+			out.flush();
+			out.writeInt(toSend.length);
+			out.writeInt(msgSign1.length);
+			out.write(toSend);
+			out.flush();
+			out.write(sigPart2);
+		}
+
+		int lenght = 0;
+		int msgLenght = 0;
+		byte[] inputByte;
+		byte[] cipherMsg;
+		byte[] cipherSig;
+		byte[] msg;
+		byte[] sig;
+		byte[] sigPart;
+		;
+		for (DataInputStream in : ins) {
+			lenght = in.readInt();
+			msgLenght = in.readInt();
+			System.out.println("DEBUG0: " + lenght);
+			inputByte = new byte[lenght];
+			in.readFully(inputByte, 0, lenght);
+
+			System.out.println("DEBUG: " + 1);
+			cipherMsg = Arrays.copyOfRange(inputByte, 0, msgLenght);
+			cipherSig = Arrays.copyOfRange(inputByte, msgLenght, lenght);
+			msg = decrypt(cipherMsg, privKey);
+			sig = decrypt(cipherSig, privKey);
+
+			inputByte = new byte[256];
+
+			in.readFully(inputByte, 0, 256);
+
+			System.out.println("DEBUG: " + 2);
+			sigPart = decrypt(inputByte, privKey);
+			sig = concatenate(sig, sigPart);
+
+			if (!verifySignature(pubKey, sig, msg)) {
+				System.out.println("Signature not verified, username not registered");
+				for (DataOutputStream out : outs) {
+					out.close();
+				}
+
+				for (DataInputStream inn : ins) {
+					inn.close();
+				}
+
+				return;
+			}
+			sessionKey = new SecretKeySpec(msg, 0, 16, "AES");
+			sessionKeys.add(sessionKey);
+		}
+		
+		for (DataInputStream in : ins) {
+			lenght = in.readInt();
+			msgLenght = in.readInt();
+			inputByte = new byte[lenght];
+			in.readFully(inputByte, 0, lenght);
+
+			System.out.println("DEBUG: " + 1);
+			cipherMsg = Arrays.copyOfRange(inputByte, 0, msgLenght);
+			cipherSig = Arrays.copyOfRange(inputByte, msgLenght, lenght);
+			msg = decrypt(cipherMsg, privKey);
+			sig = decrypt(cipherSig, privKey);
+
+			inputByte = new byte[256];
+
+			in.readFully(inputByte, 0, 256);
+
+			System.out.println("DEBUG: " + 2);
+			sigPart = decrypt(inputByte, privKey);
+			sig = concatenate(sig, sigPart);
+
+			if (!verifySignature(pubKey, sig, msg)) {
+				System.out.println("Signature not verified, username not registered");
+				for (DataOutputStream out : outs) {
+					out.close();
+				}
+
+				for (DataInputStream inn : ins) {
+					inn.close();
+				}
+				return;
+			}
+			iv = new IvParameterSpec(msg);
+			ivs.add(iv);
+		}
+	}
+	
+	public void challengeResponse() throws IOException {
+
+		System.out.println("Asking for Challenge-Response");
+		int msgLength = 0;
+		int length = 0;
+		byte[] inputByte;
+		byte[] decipherInput;
+		byte[] msg;
+		byte[] sig;
+		for (int i = 0; i < sessionKeys.size(); i++) {
+			SecretKey sk = sessionKeys.get(i);
+			DataInputStream in = ins.get(i);
+			IvParameterSpec iv = ivs.get(i);
+
+			msgLength = in.readInt();
+			length = in.readInt();
+			inputByte = new byte[length];
+			in.readFully(inputByte, 0, length);
+			System.out.println(length);
+			decipherInput = sessionDecrypt(sk, iv, inputByte);
+			msg = Arrays.copyOfRange(decipherInput, 0, msgLength);
+			sig = Arrays.copyOfRange(decipherInput, msgLength, decipherInput.length);
+
+			if (!verifySignature(pubKey, sig, msg)) {
+				System.out.println("Signature not verified, no action taken");
+				return;
+			}
+			counters.add(Integer.parseInt(new String(msg, "UTF-8")));
+			System.out.println("Challenge-Response: " + counter);
+		}
+
+	}
+	
+	public int calculateCounterServer(int c) {
+		c = c + 42;
+		System.out.println("Challenge-Response new counter: " + c);
+		return c;
+	}
+	
 	public ArrayList<byte[]> msgRefactor(Key k) throws IOException {
 		int crLength = in.readInt();
 		int msgCrLength = in.readInt();
