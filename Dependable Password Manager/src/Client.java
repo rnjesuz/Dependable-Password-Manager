@@ -59,38 +59,12 @@ public class Client {
 			ins.add(new DataInputStream(s.getInputStream()));
 		}
 
-
+		//send pubKey+username
 		sendUsername();
+		//initiate challenge response handshake
 		askServerClock();
-		
 		// send client tag
-		byte[] msg;
-		for (int i = 0; i < sessionKeys.size(); i++) {
-			DataOutputStream out = outs.get(i);
-			SecretKey sk = sessionKeys.get(i);
-			IvParameterSpec iv = ivs.get(i);
-			if(serverN == i){
-				msg = "lider".getBytes("UTF-8");
-			}else{
-				msg = "follower".getBytes("UTF-8");
-			}
-			System.out.println(new String(msg, "UTF-8"));
-			counters.set(i, calculateCounter(counters.get(i)));
-			byte[] challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
-			out.writeInt(challengeResponse.length);
-			byte[] msgCr = concatenate(challengeResponse, msg);
-			out.writeInt(msgCr.length);
-			System.out.println("Signing Request with Client Private Key");
-			byte[] msgSign = concatenate(msgCr, signature(msg));// creates
-			byte[] toSend = sessionEncrypt(sk, iv, msgSign);// Cipher
-			out.writeInt(toSend.length);// Sends total length
-			out.flush();
-			out.write(toSend);	
-			
-			//send 0 to flag we are client
-			out.writeInt(0);
-		}
-
+		sendTag();
 	}
 
 	public static void main(String[] args) {
@@ -153,9 +127,8 @@ public class Client {
 						System.out.println("NOT REGISTERED, TRY AGAIN");
 						System.out.println("=============================================================");
 					}
-
 					break;
-
+				
 				case "put":
 					String a;
 					byte[] putdomain, putusername, putpassword;
@@ -449,6 +422,35 @@ public class Client {
 			counters.add(Integer.parseInt(new String(msg, "UTF-8")));
 		}
 
+	}
+	
+	private void sendTag() throws IOException {
+		byte[] msg;
+		for (int i = 0; i < sessionKeys.size(); i++) {
+			DataOutputStream out = outs.get(i);
+			SecretKey sk = sessionKeys.get(i);
+			IvParameterSpec iv = ivs.get(i);
+			if(serverN == i){
+				msg = "lider".getBytes("UTF-8");
+			}else{
+				msg = "follower".getBytes("UTF-8");
+			}
+			System.out.println(new String(msg, "UTF-8"));
+			counters.set(i, calculateCounter(counters.get(i)));
+			byte[] challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
+			out.writeInt(challengeResponse.length);
+			byte[] msgCr = concatenate(challengeResponse, msg);
+			out.writeInt(msgCr.length);
+			System.out.println("Signing Request with Client Private Key");
+			byte[] msgSign = concatenate(msgCr, signature(msg));// creates
+			byte[] toSend = sessionEncrypt(sk, iv, msgSign);// Cipher
+			out.writeInt(toSend.length);// Sends total length
+			out.flush();
+			out.write(toSend);	
+			
+			//send 0 to flag we are client
+			out.writeInt(0);
+		}
 	}
 
 	public static void init(KeyStore ks, String username, String password) throws WrongPasswordException {

@@ -268,6 +268,34 @@ public class ServerThread extends Thread {
 
 					break;
 
+				case "register_follow":
+					output = msgRefactor(k);
+
+					System.out.println("################################################");
+					System.out.println("RECEIVED MSG:");
+					System.out.println(new String(output.get(2), "UTF-8"));
+					System.out.println("================================================");
+					System.out.println("DECRYPTED MSG:");
+					System.out.println(new String(output.get(0), "UTF-8"));
+					System.out.println("================================================");
+					System.out.println("SIGNATURE:");
+					System.out.println(new String(output.get(1), "UTF-8"));
+					System.out.println("################################################");
+					System.out.println("");
+
+					counterBytes = output.get(0);
+
+					// for 1,n regular
+					c_wts = Integer.parseInt(new String(counterBytes, "UTF-8"));
+					if (c_wts > wts) {
+						register(receivePublicKey(), output.get(1));
+						wts = c_wts;
+					} else
+						System.out.println("shit");
+
+					sendACK();
+					break;	
+					
 				case "put":
 
 					byte[] putDomain, putUsername, putPass;
