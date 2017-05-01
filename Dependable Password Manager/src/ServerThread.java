@@ -269,6 +269,9 @@ public class ServerThread extends Thread {
 					} else
 						System.out.println("shit");
 
+					//ask followers for what they wrote
+					//askRegisterCommand();
+					
 					sendACK();
 
 					break;
@@ -301,6 +304,10 @@ public class ServerThread extends Thread {
 
 					sendACK();
 					break;	
+					
+				case "register_to_lider":
+					System.out.println("bling bling");
+					break;
 					
 				case "put":
 
@@ -416,6 +423,55 @@ public class ServerThread extends Thread {
 			e.printStackTrace();
 			return;
 		}
+	}
+
+	private void askRegisterCommand() throws IOException {
+		
+		System.out.println("registercommand");
+		for (int i = 0; i < sessionKeys.size(); i++) {
+			SecretKey sk = sessionKeys.get(i);
+			IvParameterSpec iv = ivs.get(i);
+			DataOutputStream out = outs.get(i);
+			Socket s = sockets.get(i);
+
+			out.flush();
+			
+			byte[] commandBytes;
+			commandBytes = "register_to_lider".getBytes("UTF-8");
+			out.writeInt(commandBytes.length);
+			
+			int newCounter = calculateCounterServer(counters.get(i));
+			counters.set(i, newCounter);
+			byte[] challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
+			int cr = challengeResponse.length;
+			out.writeInt(cr);
+			byte[] msg = concatenate(challengeResponse, commandBytes);
+			out.writeInt(msg.length);
+			byte[] msgSign = concatenate(msg, signature(msg));// creates MSG+SIG
+			byte[] toSend = sessionEncrypt(sk, iv , msgSign);// Cipher
+			out.writeInt(toSend.length);// Sends total length
+			out.write(toSend);// Sends {MSG+SIG}serverpubkey	
+			
+			
+			/*byte[] wtsBytes = Integer.toString(wts).getBytes("UTF-8");
+
+			counters.set(i, calculateCounterServer(counters.get(i)));
+			challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
+			
+			out.writeInt(challengeResponse.length);
+
+			msg = concatenate(challengeResponse, wtsBytes);
+			out.writeInt(msg.length);
+
+			msgSign = concatenate(msg, signature(msg));// creates
+
+			toSend = sessionEncrypt(sk, iv, msgSign);
+
+			out.writeInt(toSend.length);// Sends total length
+			out.write(toSend);// Sends {MSG+SIG}serverpubkey
+			 			*/
+
+		}		
 	}
 
 	private void connectServerServer(Key k) throws UnknownHostException, IOException {
