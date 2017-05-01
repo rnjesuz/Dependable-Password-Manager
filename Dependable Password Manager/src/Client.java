@@ -590,39 +590,48 @@ public class Client {
 			System.out.println("=============================================================");
 			System.out.println("Sending request to register");
 			out.flush();
+			
+			byte[] commandBytes;
 			if (i == serverN) {
 				// is leader
-				out.writeInt("register".getBytes("UTF-8").length);// Sends
+				commandBytes = "register".getBytes("UTF-8");
+				out.writeInt(commandBytes.length);// Sends
 																	// length of
 			} else {
 				// is follower
-				out.writeInt("register_follow".getBytes("UTF-8").length);
+				commandBytes = "register_follow".getBytes("UTF-8");
+				out.writeInt(commandBytes.length);
 			}
-			counters.set(i, calculateCounter(counters.get(i)));
+			
+			int newCounter = calculateCounter(counters.get(i));
+			System.out.println("caculated counter: "+newCounter);
+			counters.set(i, newCounter);
 			byte[] challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
 			int cr = challengeResponse.length;
 			out.writeInt(cr);
-			byte[] msg = concatenate(challengeResponse, "register".getBytes("UTF-8"));
+			byte[] msg = concatenate(challengeResponse, commandBytes);
 			out.writeInt(msg.length);
 			System.out.println("Signing Request with Client Private Key");
 			byte[] msgSign = concatenate(msg, signature(msg));// creates
-																// MSG+SIG
+																												// MSG+SIG
 			System.out.println("=============================================================");
 			System.out.println("Request Sign: " + (new String(msgSign)));
 			System.out.println("Ciphering signed request, using server public key");
 			System.out.println("=============================================================");
-			byte[] toSend = sessionEncrypt(sk, iv, msgSign);// Cipher
+			byte[] toSend = sessionEncrypt(sk, iv , msgSign);// Cipher
 			System.out.println("Ciphered signed request: " + (new String(toSend)));
 			out.writeInt(toSend.length);// Sends total length
 			out.write(toSend);// Sends {MSG+SIG}serverpubkey
 			System.out.println("Request Sent");
-
+			
+			
+			
 			byte[] wtsBytes = Integer.toString(wts).getBytes("UTF-8");
 
 			counters.set(i, calculateCounter(counters.get(i)));
 			challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
-			cr = challengeResponse.length;
-			out.writeInt(cr);
+			
+			out.writeInt(challengeResponse.length);
 
 			msg = concatenate(challengeResponse, wtsBytes);
 			out.writeInt(msg.length);
@@ -635,6 +644,7 @@ public class Client {
 			out.writeInt(toSend.length);// Sends total length
 			out.write(toSend);// Sends {MSG+SIG}serverpubkey
 
+			
 			s.getOutputStream().write(bb.array());
 			s.getOutputStream().write(pubKey.getEncoded());
 			s.getOutputStream().flush();

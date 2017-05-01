@@ -42,7 +42,7 @@ import javax.crypto.spec.SecretKeySpec;
 public class ServerThread extends Thread {
 
 	private Socket socket = null;
-	static SecretKey sessionKey;
+	SecretKey sessionKey;
 	IvParameterSpec iv;
 	private String clientUsername = "";
 	static Key privKey;
@@ -197,31 +197,35 @@ public class ServerThread extends Thread {
 			System.out.println("Ready For Commands");
 			// =========================================================================
 			while (socket.isConnected()) {
+				
 				// preparing variables for command requests
 				msgLenght = in.readInt();
 				crLength = in.readInt();
 				int msgCrLength = in.readInt();
 				lenght = in.readInt();
+				System.out.println(lenght);
 				inputByte = new byte[lenght];
 				in.readFully(inputByte, 0, lenght);
 				decipherInput = sessionDecrypt(sessionKey, iv, inputByte);
 				msg = Arrays.copyOfRange(decipherInput, 0, msgCrLength);
 				sig = Arrays.copyOfRange(decipherInput, msgCrLength, decipherInput.length);
-
+				
 				if (!verifySignature(k, sig, msg)) {
 					System.out.println("Signature not verified, no action taken");
-					continue;
+					break;
 				}
 				counterBytes = Arrays.copyOfRange(msg, 0, crLength);
 				msg = Arrays.copyOfRange(msg, crLength, msgCrLength);
 				proposedCounter = Integer.parseInt(new String(counterBytes, "UTF-8"));
-
+				
 				if (proposedCounter != calculateCounter()) {
+					System.out.println("proposed counter: "+proposedCounter);
+					System.out.println("calculated counter: "+calculateCounter());
 					System.out.println("Challenge Response failed");
-					continue;
+					break;
 				}
 				counter = proposedCounter;
-
+					
 				System.out.println("################################################");
 				System.out.println("RECEIVED MSG:");
 				System.out.println(new String(inputByte, "UTF-8"));
@@ -240,6 +244,7 @@ public class ServerThread extends Thread {
 
 				case "register":
 
+					System.out.println("switch case register");
 					output = msgRefactor(k);
 
 					System.out.println("################################################");
@@ -269,6 +274,7 @@ public class ServerThread extends Thread {
 					break;
 
 				case "register_follow":
+					System.out.println("switch case register follow");
 					output = msgRefactor(k);
 
 					System.out.println("################################################");
@@ -434,7 +440,7 @@ public class ServerThread extends Thread {
 		
 		String tag = new String(msg, "UTF-8");
 		
-		System.out.println(tag);
+		System.out.println("RECEBI ESTA TAG: " + tag);
 		
 		if(id==0){
 			//Uses Client Key
@@ -451,6 +457,18 @@ public class ServerThread extends Thread {
 			System.out.println("Signature not verified, no action taken");
 			return;
 		}
+		
+		
+		
+		int proposedCounter = Integer.parseInt(new String(cr, "UTF-8"));
+		
+		if (proposedCounter != calculateCounter()) {
+			System.out.println("proposed counter: "+proposedCounter);
+			System.out.println("calculated counter: "+calculateCounter());
+			System.out.println("Challenge Response failed");
+			return;
+		}
+		counter = proposedCounter;
 		
 		if (tag.equals("lider")) {
 			for (int i = 8080; i <= 8084; i++) {
@@ -472,6 +490,7 @@ public class ServerThread extends Thread {
 			sendTag();
 		}
 		else if(tag.equals("follower")){//DOES NOTHING
+			System.out.println("received follower tag");
 			}
 			
 	}
@@ -708,8 +727,7 @@ public class ServerThread extends Thread {
 	}
 
 	public void register(Key publicKey, byte[] signature) {
-		// dir.mkdir();
-		// File file = new File(clientUsername + File.separator + "publicKey");
+		
 		File dir = new File(Integer.toString(_port) + File.separator + clientUsername);
 		if (dir.mkdir()) {
 		} else {
@@ -719,8 +737,7 @@ public class ServerThread extends Thread {
 		String key = DatatypeConverter.printHexBinary(publicKey.getEncoded());
 		FileOutputStream keyfos;
 		try {
-			keyfos = new FileOutputStream(
-					Integer.toString(_port) + File.separator + clientUsername + File.separator + "publicKey");
+			keyfos = new FileOutputStream(Integer.toString(_port) + File.separator + clientUsername + File.separator + "publicKey");
 			keyfos.write(key.getBytes());
 			keyfos.write(signature);
 
