@@ -53,42 +53,40 @@ public class Client {
 			sockets.add(new Socket("localhost", i));
 		}
 		System.out.println(sockets.size());
-		for (Socket s : sockets) {
+		for (int i = 0; i < sockets.size(); i++) {
+			Socket s =  sockets.get(i);
 			outs.add(new DataOutputStream(s.getOutputStream()));
 			ins.add(new DataInputStream(s.getInputStream()));
 		}
-		System.out.println(outs.size());
-		System.out.println(ins.size());
 
-		// out = new DataOutputStream(clientSocket.getOutputStream());
-		// in = new DataInputStream(clientSocket.getInputStream());
 
 		sendUsername();
 		askServerClock();
 		
 		// send client tag
+		byte[] msg;
 		for (int i = 0; i < sessionKeys.size(); i++) {
-			out = outs.get(i);
+			DataOutputStream out = outs.get(i);
 			SecretKey sk = sessionKeys.get(i);
-			byte[] msg = "ola".getBytes("UTF-8");
+			IvParameterSpec iv = ivs.get(i);
 			if(serverN == i){
 				msg = "lider".getBytes("UTF-8");
 			}else{
 				msg = "follower".getBytes("UTF-8");
 			}
-			
+			System.out.println(new String(msg, "UTF-8"));
 			counters.set(i, calculateCounter(counters.get(i)));
 			byte[] challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
-			int cr = challengeResponse.length;
-			out.writeInt(cr);
+			out.writeInt(challengeResponse.length);
 			byte[] msgCr = concatenate(challengeResponse, msg);
 			out.writeInt(msgCr.length);
 			System.out.println("Signing Request with Client Private Key");
 			byte[] msgSign = concatenate(msgCr, signature(msg));// creates
-																// MSG+SIG
 			byte[] toSend = sessionEncrypt(sk, iv, msgSign);// Cipher
 			out.writeInt(toSend.length);// Sends total length
-			out.write(toSend);// Sends {MSG+SIG}serverpubkey			
+			out.flush();
+			out.write(toSend);	
+			
 			//send 0 to flag we are client
 			out.writeInt(0);
 		}
@@ -289,10 +287,6 @@ public class Client {
 		ByteBuffer bb = ByteBuffer.allocate(8);
 
 		bb.putInt(pubKey.getEncoded().length);
-		/*
-		 * clientSocket.getOutputStream().write(bb.array());
-		 * clientSocket.getOutputStream().write(pubKey.getEncoded());
-		 */
 
 		for (Socket s : sockets) {
 			s.getOutputStream().write(bb.array());
@@ -324,8 +318,9 @@ public class Client {
 		byte[] msg;
 		byte[] sig;
 		byte[] sigPart;
-		;
-		for (DataInputStream in : ins) {
+		
+		for (int i=0; i<ins.size(); i++) {
+			DataInputStream in = ins.get(i);
 			lenght = in.readInt();
 			msgLenght = in.readInt();
 			System.out.println("DEBUG0: " + lenght);
@@ -375,7 +370,8 @@ public class Client {
 		 * return; } sessionKey = new SecretKeySpec(msg, 0, 16, "AES");
 		 */
 
-		for (DataInputStream in : ins) {
+		for (int i=0; i<ins.size(); i++) {
+			DataInputStream in = ins.get(i);
 			lenght = in.readInt();
 			msgLenght = in.readInt();
 			inputByte = new byte[lenght];
@@ -406,7 +402,7 @@ public class Client {
 				}
 				return;
 			}
-			iv = new IvParameterSpec(msg);
+			IvParameterSpec iv = new IvParameterSpec(msg);
 			ivs.add(iv);
 		}
 
@@ -451,7 +447,6 @@ public class Client {
 				return;
 			}
 			counters.add(Integer.parseInt(new String(msg, "UTF-8")));
-			System.out.println("Challenge-Response: " + counter);
 		}
 
 	}

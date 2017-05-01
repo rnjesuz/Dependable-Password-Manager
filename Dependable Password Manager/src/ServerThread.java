@@ -75,7 +75,9 @@ public class ServerThread extends Thread {
 	}
 
 	public void run() {
-
+		System.out.println("##################################################");
+		System.out.println("NEW THREAD");
+		System.out.println("##################################################");
 		try {
 			out = new DataOutputStream(this.socket.getOutputStream());
 
@@ -192,6 +194,7 @@ public class ServerThread extends Thread {
 
 			connectServerServer(k);
 
+			System.out.println("Ready For Commands");
 			// =========================================================================
 			while (socket.isConnected()) {
 				// preparing variables for command requests
@@ -389,12 +392,18 @@ public class ServerThread extends Thread {
 		byte[] inputByte = new byte[lenght];
 		in.readFully(inputByte, 0, lenght);
 		int id = in.readInt();
-		byte[] decipherInput = sessionDecrypt(sessionKey, iv, inputByte);
-		byte[] msgCr = Arrays.copyOfRange(decipherInput, 0, msgCrLength);
-		byte[] cr = Arrays.copyOfRange(msgCr, 0, crLength);
-		byte[] msg = Arrays.copyOfRange(msgCr, crLength, msgCrLength);
-		byte[] sig = Arrays.copyOfRange(decipherInput, msgCrLength, decipherInput.length);
-
+		byte[] decipherInput;
+		byte[] msgCr;
+		byte[] cr ;
+		byte[] msg = null;
+		byte[] sig = null;
+		
+		decipherInput = sessionDecrypt(sessionKey, iv, inputByte);
+		msgCr = Arrays.copyOfRange(decipherInput, 0, msgCrLength);
+		cr = Arrays.copyOfRange(msgCr, 0, crLength);
+		msg = Arrays.copyOfRange(msgCr, crLength, msgCrLength);
+		sig = Arrays.copyOfRange(decipherInput, msgCrLength, decipherInput.length);
+		
 		String tag = new String(msg, "UTF-8");
 		
 		System.out.println(tag);
@@ -402,12 +411,14 @@ public class ServerThread extends Thread {
 		if(id==0){
 			//Uses Client Key
 			System.out.println("SOU UM CLIENTE");
+			
 		} else{ 
 			//Uses Server Key
 				k = pubKey;
 				System.out.println("SOU UM SERVER");
+				
 		}
-			
+		
 		if (!verifySignature(k, sig, msg)) {
 			System.out.println("Signature not verified, no action taken");
 			return;
@@ -432,27 +443,32 @@ public class ServerThread extends Thread {
 			challengeResponse();
 			sendTag();
 		}
+		else if(tag.equals("follower")){//DOES NOTHING
+			}
+			
 	}
 	
 	private void sendTag() throws IOException{
-		for (int i = 0; i < sessionKeys.size(); i++) {
-			out = outs.get(i);
+		for (int i = 0; i < sockets.size(); i++) {
+			DataOutputStream out = outs.get(i);
 			SecretKey sk = sessionKeys.get(i);
-			byte[] msg;
-			msg = "follower".getBytes("UTF-8");
+			IvParameterSpec iv = ivs.get(i);
+	
+			byte[] msg = "follower".getBytes("UTF-8");
+			System.out.println(new String(msg, "UTF-8"));
 			
 			counters.set(i, calculateCounterServer(counters.get(i)));
 			byte[] challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
-			int cr = challengeResponse.length;
-			out.writeInt(cr);
-			msg = concatenate(challengeResponse, msg);
-			out.writeInt(msg.length);
+			out.writeInt(challengeResponse.length);
+			byte[] msgCr = concatenate(challengeResponse, msg);
+			out.writeInt(msgCr.length);
 			System.out.println("Signing Request with Client Private Key");
-			byte[] msgSign = concatenate(msg, signature(msg));// creates
-																// MSG+SIG
+			byte[] msgSign = concatenate(msgCr, signature(msg));// creates
 			byte[] toSend = sessionEncrypt(sk, iv, msgSign);// Cipher
 			out.writeInt(toSend.length);// Sends total length
-			out.write(toSend);// Sends {MSG+SIG}serverpubkey			
+			out.flush();
+			out.write(toSend);	
+			
 			//send 0 to flag we are client
 			out.writeInt(1);
 		}
@@ -464,10 +480,7 @@ public class ServerThread extends Thread {
 		ByteBuffer bb = ByteBuffer.allocate(8);
 
 		bb.putInt(pubKey.getEncoded().length);
-		/*
-		 * clientSocket.getOutputStream().write(bb.array());
-		 * clientSocket.getOutputStream().write(pubKey.getEncoded());
-		 */
+
 
 		for (Socket s : sockets) {
 			s.getOutputStream().write(bb.array());
@@ -533,7 +546,7 @@ public class ServerThread extends Thread {
 
 				return;
 			}
-			sessionKey = new SecretKeySpec(msg, 0, 16, "AES");
+			SecretKey sessionKey = new SecretKeySpec(msg, 0, 16, "AES");
 			sessionKeys.add(sessionKey);
 		}
 		
@@ -568,7 +581,7 @@ public class ServerThread extends Thread {
 				}
 				return;
 			}
-			iv = new IvParameterSpec(msg);
+			IvParameterSpec iv = new IvParameterSpec(msg);
 			ivs.add(iv);
 		}
 	}
@@ -601,7 +614,6 @@ public class ServerThread extends Thread {
 				return;
 			}
 			counters.add(Integer.parseInt(new String(msg, "UTF-8")));
-			System.out.println("Challenge-Response: " + counter);
 		}
 
 	}
