@@ -690,20 +690,31 @@ public class Client {
 	public void save_password(byte[] domain, byte[] username, byte[] password) {
 		try {
 			wts++;
-			SecretKey sk = sessionKeys.get(serverN);
-			IvParameterSpec iv = ivs.get(serverN);
-			DataOutputStream out = outs.get(serverN);
+			for (int i = 0; i < sessionKeys.size(); i++) {
+			SecretKey sk = sessionKeys.get(i);
+			IvParameterSpec iv = ivs.get(i);
+			DataOutputStream out = outs.get(i);
 
 			System.out.println("=============================================================");
 			System.out.println("Sending request to save password");
 			out.flush();
 			//out.writeInt("put".getBytes("UTF-8").length);// Sends length of msg
 
-			counters.set(serverN, calculateCounter(counters.get(serverN)));
-			byte[] challengeResponse = Integer.toString(counters.get(serverN)).getBytes("UTF-8");
+			counters.set(i, calculateCounter(counters.get(i)));
+			byte[] challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
 			int cr = challengeResponse.length;
 			out.writeInt(cr);
-			byte[] msg = concatenate(challengeResponse, "put".getBytes("UTF-8"));
+			byte[] commandBytes;
+			if (i == serverN) {
+				// is leader
+				commandBytes = "put".getBytes("UTF-8");
+				//out.writeInt(commandBytes.length);// Sends// length of
+			} else {
+				// is follower
+				commandBytes = "put_follow".getBytes("UTF-8");
+				//out.writeInt(commandBytes.length);
+			}
+			byte[] msg = concatenate(challengeResponse, commandBytes);
 			out.writeInt(msg.length);
 			System.out.println("Signing Request with Client Private Key");
 			byte[] msgSign = concatenate(msg, signature(msg));// creates
@@ -721,8 +732,8 @@ public class Client {
 			System.out.println("Sending domain: " + (new String(domain, "UTF-8")));
 			out.flush();
 
-			counters.set(serverN, calculateCounter(counters.get(serverN)));
-			challengeResponse = Integer.toString(counters.get(serverN)).getBytes("UTF-8");
+			counters.set(i, calculateCounter(counters.get(i)));
+			challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
 			cr = challengeResponse.length;
 			out.writeInt(cr);
 			msg = concatenate(challengeResponse, domain);
@@ -745,8 +756,8 @@ public class Client {
 			System.out.println("Sending username: " + (new String(username, "UTF-8")));
 			out.flush();
 
-			counters.set(serverN, calculateCounter(counters.get(serverN)));
-			challengeResponse = Integer.toString(counters.get(serverN)).getBytes("UTF-8");
+			counters.set(i, calculateCounter(counters.get(i)));
+			challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
 			cr = challengeResponse.length;
 			out.writeInt(cr);
 			msg = concatenate(challengeResponse, username);
@@ -775,8 +786,8 @@ public class Client {
 
 			byte[] wtsBytes = Integer.toString(wts).getBytes("UTF-8");
 
-			counters.set(serverN, calculateCounter(counters.get(serverN)));
-			challengeResponse = Integer.toString(counters.get(serverN)).getBytes("UTF-8");
+			counters.set(i, calculateCounter(counters.get(i)));
+			challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
 			cr = challengeResponse.length;
 			out.writeInt(cr);
 
@@ -791,7 +802,8 @@ public class Client {
 			out.writeInt(toSend.length);// Sends total length
 			out.write(toSend);// Sends {MSG+SIG}serverpubkey
 
-		} catch (IOException e) {
+			}
+			} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
