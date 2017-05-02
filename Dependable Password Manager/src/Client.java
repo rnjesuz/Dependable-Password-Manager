@@ -64,9 +64,44 @@ public class Client {
 		//initiate challenge response handshake
 		askServerClock();
 		// send client tag
-		sendTag();
+		//sendTag();
+		martelaBem();
 	}
 
+	private void martelaBem() throws IOException {
+		byte[] commandBytes;
+		for (int i = 0; i < sessionKeys.size(); i++) {
+			DataOutputStream out = outs.get(i);
+			SecretKey sk = sessionKeys.get(i);
+			IvParameterSpec iv = ivs.get(i);
+			commandBytes = "martelo".getBytes("UTF-8");
+			System.out.println(new String(commandBytes, "UTF-8"));
+			int newCounter = calculateCounter(counters.get(i));
+			System.out.println("caculated counter: "+newCounter);
+			counters.set(i, newCounter);
+			byte[] challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
+			int cr = challengeResponse.length;
+			out.writeInt(cr);
+			byte[] msg = concatenate(challengeResponse, commandBytes);
+			out.writeInt(msg.length);
+			System.out.println("Signing Request with Client Private Key");
+			byte[] msgSign = concatenate(msg, signature(msg));// creates
+																												// MSG+SIG
+			System.out.println("=============================================================");
+			System.out.println("Request Sign: " + (new String(msgSign)));
+			System.out.println("Ciphering signed request, using server public key");
+			System.out.println("=============================================================");
+			byte[] toSend = sessionEncrypt(sk, iv , msgSign);// Cipher
+			System.out.println("Ciphered signed request: " + (new String(toSend)));
+			out.writeInt(toSend.length);// Sends total length
+			out.write(toSend);// Sends {MSG+SIG}serverpubkey
+			System.out.println("Request Sent");
+				
+			
+			//send 0 to flag we are client
+			//out.writeInt(0);
+		}
+	}
 	public static void main(String[] args) {
 
 		Client client = null;
@@ -237,8 +272,8 @@ public class Client {
 		if (wts != proposedWts) {
 			System.out.println("something's not right with wts");
 			return false;
-		} else if (!((new String(msg, "UTF-8")).equals("ack"))) {
-			System.out.println("Something went wrong");
+		} else if (!((new String(msg, "UTF-8")).equals("ACK"))) {
+			System.out.println("Something went wrong, try again");
 			return false;
 		} else {
 			return true;
@@ -431,7 +466,7 @@ public class Client {
 			SecretKey sk = sessionKeys.get(i);
 			IvParameterSpec iv = ivs.get(i);
 			if(serverN == i){
-				msg = "lider".getBytes("UTF-8");
+				msg = "leader".getBytes("UTF-8");
 			}else{
 				msg = "follower".getBytes("UTF-8");
 			}
@@ -595,12 +630,12 @@ public class Client {
 			if (i == serverN) {
 				// is leader
 				commandBytes = "register".getBytes("UTF-8");
-				out.writeInt(commandBytes.length);// Sends
+				//out.writeInt(commandBytes.length);// Sends
 																	// length of
 			} else {
 				// is follower
 				commandBytes = "register_follow".getBytes("UTF-8");
-				out.writeInt(commandBytes.length);
+				//out.writeInt(commandBytes.length);
 			}
 			
 			int newCounter = calculateCounter(counters.get(i));
@@ -662,7 +697,7 @@ public class Client {
 			System.out.println("=============================================================");
 			System.out.println("Sending request to save password");
 			out.flush();
-			out.writeInt("put".getBytes("UTF-8").length);// Sends length of msg
+			//out.writeInt("put".getBytes("UTF-8").length);// Sends length of msg
 
 			counters.set(serverN, calculateCounter(counters.get(serverN)));
 			byte[] challengeResponse = Integer.toString(counters.get(serverN)).getBytes("UTF-8");
@@ -774,7 +809,7 @@ public class Client {
 				System.out.println("=============================================================");
 				System.out.println("Sending request to retrieve password");
 				out.flush();
-				out.writeInt("get".getBytes("UTF-8").length);// Sends length of
+				//out.writeInt("get".getBytes("UTF-8").length);// Sends length of
 																// msg
 
 				counters.set(i, calculateCounter(counters.get(i)));

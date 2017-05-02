@@ -192,14 +192,14 @@ public class ServerThread extends Thread {
 
 			// ============================================================================================================================================
 
-			connectServerServer(k);
+			//connectServerServer(k);
 
 			System.out.println("Ready For Commands");
 			// =========================================================================
 			while (socket.isConnected()) {
 				
 				// preparing variables for command requests
-				msgLenght = in.readInt();
+				//msgLenght = in.readInt();
 				crLength = in.readInt();
 				int msgCrLength = in.readInt();
 				lenght = in.readInt();
@@ -242,6 +242,10 @@ public class ServerThread extends Thread {
 
 				switch (input) {
 
+				case "martelo":
+					connectServerServer(k);
+					break;
+					
 				case "register":
 
 					System.out.println("switch case register");
@@ -270,9 +274,16 @@ public class ServerThread extends Thread {
 						System.out.println("shit");
 
 					//ask followers for what they wrote
-					//askRegisterCommand();
 					
-					sendACK();
+					try {
+						System.out.println("estou a espera");
+						sleep(5000);
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					
+					askRegisterCommand(output.get(1));
 
 					break;
 
@@ -293,20 +304,84 @@ public class ServerThread extends Thread {
 					System.out.println("");
 
 					counterBytes = output.get(0);
-
+					
 					// for 1,n regular
 					c_wts = Integer.parseInt(new String(counterBytes, "UTF-8"));
 					if (c_wts > wts) {
 						register(receivePublicKey(), output.get(1));
 						wts = c_wts;
-					} else
+					} else {
 						System.out.println("shit");
-
-					sendACK();
-					break;	
+					}
 					
-				case "register_to_lider":
-					System.out.println("bling bling");
+					break;
+					
+				case "register_to_leader":
+					System.out.println("Follower Sending register value to leader");
+					int sigSize = in.readInt();
+					
+					msg = getPublicKey(sigSize).getEncoded();
+					sig = signature(msg);
+					msgSign = concatenate(msg,sig);
+					toSend = sessionEncrypt(sessionKey,iv,msgSign);
+					
+					out.writeInt(msg.length);
+					out.writeInt(toSend.length);
+					out.write(toSend);
+					
+					//Receiving ACK from leader
+					System.out.println("ACK FROM LEADER - prt1 - the ack menace");
+					msgLenght = in.readInt();
+					lenght = in.readInt();
+					System.out.println("ACK FROM LEADER - prt2 - the attack of the acks");
+					inputByte = new byte[lenght];
+							
+					in.readFully(inputByte);
+					System.out.println("ACK FROM LEADER - part 3 - the revenge from the acks");
+					
+					/*msgLenght = in.readInt();
+					
+					System.out.println("ACK FROM LEADER - part 4 - a new hack");
+					lenght = in.readInt();
+					System.out.println("ACK FROM LEADER -  part 5 - acks strike back");
+					inputByte = new byte[lenght];
+					in.readFully(inputByte);
+					System.out.println("ACK FROM LEADER - part 5 - return of the ack");
+					*/
+					msgSign = sessionDecrypt(sessionKey,iv,inputByte);
+					msg = Arrays.copyOfRange(msgSign, 0, msgLenght);
+					sig = Arrays.copyOfRange(msgSign, msgLenght, msgSign.length);
+					
+					//needs to do more in case of failure
+					if(!(verifySignature(pubKey,sig,msg))) {
+						System.out.println("signature not verified");
+						break;
+					}
+					
+					if("NOACK".equals(new String(msg, "UTF-8"))) {
+						break;
+					} else {
+						/*sig = Arrays.copyOfRange(msg, msg.length - sigSize, msg.length);
+						byte[] pkey = new byte[msg.length - sigSize];
+						pkey = Arrays.copyOfRange(msg, 0, msg.length - sigSize);
+						
+						X509EncodedKeySpec ks = new X509EncodedKeySpec(pkey);
+						KeyFactory kf = KeyFactory.getInstance("RSA");
+						
+						register((Key)kf.generatePublic(ks), sig);*/
+						
+						register(msg);
+						
+						msg = "ACK".getBytes("UTF-8");
+						sig = signature(msg);
+						msgSign = concatenate(msg,sig);
+						toSend = sessionEncrypt(sessionKey,iv,msgSign);
+						
+						out.writeInt(toSend.length);
+						out.writeInt(msg.length);
+						out.write(toSend);
+					}
+					
 					break;
 					
 				case "put":
@@ -363,12 +438,12 @@ public class ServerThread extends Thread {
 					c_wts = Integer.parseInt(new String(counterBytes, "UTF-8"));
 					String name = null;
 					if (c_wts > wts) {
-						name = put(getPublicKey(sig), putDomain, putUsername, putPass, sig);
+						name = put(getPublicKey(sig.length), putDomain, putUsername, putPass, sig);
 						wts = c_wts;
 					} else
 						System.out.println("shit");
 
-					sendACK();
+					//sendACK();
 					int writeBack = in.readInt();
 					if (writeBack == 1) {
 						writeBack(name);
@@ -409,7 +484,7 @@ public class ServerThread extends Thread {
 					System.out.println("################################################");
 					System.out.println("");
 
-					get(getPublicKey(output.get(1)), getDomain, getUsername, output.get(1));
+					get(getPublicKey(output.get(1).length), getDomain, getUsername, output.get(1));
 
 					break;
 
@@ -425,58 +500,150 @@ public class ServerThread extends Thread {
 		}
 	}
 
-	private void askRegisterCommand() throws IOException {
+	private void askRegisterCommand(byte[] sigClient) throws IOException {
 		
 		System.out.println("registercommand");
+		ArrayList<byte[]> values = new ArrayList<byte[]>();		
+		int lenght, msgLenght, acks = 0;
+		byte[] msg, sig, msgSign, toSend, inputByte = null;
+		
+		values.add(getPublicKey(sigClient.length).getEncoded());
+		
+		
 		for (int i = 0; i < sessionKeys.size(); i++) {
 			SecretKey sk = sessionKeys.get(i);
 			IvParameterSpec iv = ivs.get(i);
 			DataOutputStream out = outs.get(i);
-			Socket s = sockets.get(i);
+			DataInputStream in = ins.get(i);
 
 			out.flush();
 			
 			byte[] commandBytes;
-			commandBytes = "register_to_lider".getBytes("UTF-8");
-			out.writeInt(commandBytes.length);
+			commandBytes = "register_to_leader".getBytes("UTF-8");
+			//out.writeInt(commandBytes.length);
 			
 			int newCounter = calculateCounterServer(counters.get(i));
 			counters.set(i, newCounter);
 			byte[] challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
 			int cr = challengeResponse.length;
 			out.writeInt(cr);
-			byte[] msg = concatenate(challengeResponse, commandBytes);
+			msg = concatenate(challengeResponse, commandBytes);
 			out.writeInt(msg.length);
-			byte[] msgSign = concatenate(msg, signature(msg));// creates MSG+SIG
-			byte[] toSend = sessionEncrypt(sk, iv , msgSign);// Cipher
-			out.writeInt(toSend.length);// Sends total length
-			out.write(toSend);// Sends {MSG+SIG}serverpubkey	
-			
-			
-			/*byte[] wtsBytes = Integer.toString(wts).getBytes("UTF-8");
-
-			counters.set(i, calculateCounterServer(counters.get(i)));
-			challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
-			
-			out.writeInt(challengeResponse.length);
-
-			msg = concatenate(challengeResponse, wtsBytes);
-			out.writeInt(msg.length);
-
-			msgSign = concatenate(msg, signature(msg));// creates
-
-			toSend = sessionEncrypt(sk, iv, msgSign);
-
+			msgSign = concatenate(msg, signature(msg));// creates MSG+SIG
+			toSend = sessionEncrypt(sk, iv , msgSign);// Cipher
 			out.writeInt(toSend.length);// Sends total length
 			out.write(toSend);// Sends {MSG+SIG}serverpubkey
-			 			*/
-
-		}		
+			out.writeInt(sigClient.length);//sends size of client signature to follower
+			
+		
+			//NEW STUFF
+			System.out.println("a receber tamanho da mensagem");
+			msgLenght = in.readInt();
+			System.out.println("a receber tamanho total");
+			lenght = in.readInt();
+			
+			
+			inputByte = new byte[lenght];
+			System.out.println("ler a mensagem toda");
+			in.readFully(inputByte);
+			
+			msgSign = sessionDecrypt(sk,iv,inputByte);
+			msg = Arrays.copyOfRange(msgSign, 0, msgLenght);
+			sig = Arrays.copyOfRange(msgSign, msgLenght, msgSign.length);
+			
+			//needs to do more in case of failure
+			if(verifySignature(pubKey, sig, msg)) {
+				System.out.println("signature not verified");
+				continue;
+			}
+			values.add(msg);			
+		}
+		
+		//CHECKS THE MAJORITY ELEMENT
+		int count = 0;
+		String majorityElement = null;
+	    for (int i = 0; i < values.size(); i++) {
+	    	String aux = new String(values.get(i),"UTF-8");
+	        if (count == 0)
+	            majorityElement = aux;
+	        if (aux.equals(majorityElement)) 
+	            count++;
+	        else
+	            count--;
+	    }
+	    count = 0;
+	    for (int i = 0; i < values.size(); i++) {
+	    	String aux = new String(values.get(i),"UTF-8");
+	        if (aux.equals(majorityElement))
+	            count++;
+	    }
+	    boolean sendAck = true;
+	    if (!(count > values.size()/2)) {
+	    	sendAck = false;
+	    }		
+	    
+		for (int i = 0; i < sessionKeys.size(); i++) {
+			SecretKey sk = sessionKeys.get(i);
+			IvParameterSpec iv = ivs.get(i);
+			DataOutputStream out = outs.get(i);
+			DataInputStream in = ins.get(i);
+			
+			if(sendAck) {
+				/*msg = "ACK".getBytes("UTF-8");
+				sig = signature(msg);
+				msgSign = concatenate(msg, sig);
+				toSend = sessionEncrypt(sk, iv, msgSign);
+				
+				out.writeInt(msg.length);
+				out.writeInt(toSend.length);
+				out.write(toSend);*/
+				
+				msg = concatenate(majorityElement.getBytes("UTF-8"), sigClient);
+				sig = signature(msg);
+				msgSign = concatenate(msg, sig);
+				toSend = sessionEncrypt(sk, iv, msgSign);
+				
+				out.writeInt(msg.length);
+				out.writeInt(toSend.length);
+				out.write(toSend);
+				
+				//waiting for ACK from followers
+				lenght = in.readInt();
+				msgLenght = in.readInt();
+				
+				inputByte = new byte[lenght];
+				in.readFully(inputByte);
+				
+				msgSign = sessionDecrypt(sk,iv,inputByte);
+				msg = Arrays.copyOfRange(msgSign, 0, msgLenght);
+				sig = Arrays.copyOfRange(msgSign, msgLenght, msgSign.length);
+				
+				if(!verifySignature(pubKey, sig, msg)) {
+					System.out.println("signature not verified");
+					continue;
+				}
+				
+				if((new String(msg, "UTF-8").equals("ACK"))) {
+					acks++;
+				}
+				
+			} else {
+				msg = "NOACK".getBytes("UTF-8");
+				sig = signature(msg);
+				msgSign = concatenate(msg, sig);
+				toSend = sessionEncrypt(sk, iv, msgSign);
+			}			
+		}
+		
+		//(n+f)/2 
+		if(acks >= 4)
+			sendACK(true);
+		else sendACK(false);
 	}
 
 	private void connectServerServer(Key k) throws UnknownHostException, IOException {
 
-		int crLength = in.readInt();
+		/*int crLength = in.readInt();
 		int msgCrLength = in.readInt();
 		int lenght = in.readInt();
 		byte[] inputByte = new byte[lenght];
@@ -526,7 +693,7 @@ public class ServerThread extends Thread {
 		}
 		counter = proposedCounter;
 		
-		if (tag.equals("lider")) {
+		if (tag.equals("leader")) {*/
 			for (int i = 8080; i <= 8084; i++) {
 				if (i != _port) {
 					sockets.add(new Socket("localhost", i));
@@ -543,11 +710,12 @@ public class ServerThread extends Thread {
 
 			sendUsername();
 			challengeResponse();
-			sendTag();
+			System.out.println("tamanhoooo: "+sockets.size());
+			/*sendTag();
 		}
 		else if(tag.equals("follower")){//DOES NOTHING
 			System.out.println("received follower tag");
-			}
+			}*/
 			
 	}
 	
@@ -592,8 +760,8 @@ public class ServerThread extends Thread {
 
 		// out.flush();
 
-		byte[] msgSign1 = encrypt("Server".getBytes("UTF-8"), pubKey);
-		byte[] sig0 = signature("Server".getBytes("UTF-8"));
+		byte[] msgSign1 = encrypt(clientUsername.getBytes("UTF-8"), pubKey);
+		byte[] sig0 = signature(clientUsername.getBytes("UTF-8"));
 		byte[] sigPart1 = encrypt(Arrays.copyOfRange(sig0, 0, (sig0.length / 2)), pubKey);
 		byte[] sigPart2 = encrypt(Arrays.copyOfRange(sig0, (sig0.length / 2), sig0.length), pubKey);
 		toSend = concatenate(msgSign1, sigPart1);
@@ -811,6 +979,36 @@ public class ServerThread extends Thread {
 			e.printStackTrace();
 		}
 	}
+	
+public void register(byte[] val) {
+		
+		File dir = new File(Integer.toString(_port) + File.separator + clientUsername);
+		if (dir.mkdir()) {
+		} else {
+			System.out.println("User already registered");
+		}
+
+		//String key = DatatypeConverter.printHexBinary(publicKey.getEncoded());
+		FileOutputStream keyfos;
+		try {
+			keyfos = new FileOutputStream(Integer.toString(_port) + File.separator + clientUsername + File.separator + "publicKey");
+			keyfos.write(val);
+			//keyfos.write(signature);
+
+			System.out.println("################################################");
+			System.out.println(clientUsername + " Registered");
+			System.out.println("################################################");
+			System.out.println("");
+
+			keyfos.close();
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
 
 	public String put(Key publicKey, byte[] domain, byte[] username, byte[] password, byte[] signature) {
 		try {
@@ -919,7 +1117,7 @@ public class ServerThread extends Thread {
 		return null;
 	}
 
-	public Key getPublicKey(byte[] signature) {
+	public Key getPublicKey(int sigSize) {
 		Key output = null;
 
 		try {
@@ -932,7 +1130,7 @@ public class ServerThread extends Thread {
 			File file = new File(
 					Integer.toString(_port) + File.separator + clientUsername + File.separator + "publicKey");
 			FileInputStream fis = new FileInputStream(file);
-			byte[] outputbytes = new byte[fis.available() - signature.length];
+			byte[] outputbytes = new byte[fis.available() - sigSize];
 			fis.read(outputbytes);
 
 			String aux = new String(outputbytes, "UTF-8");
@@ -1182,9 +1380,14 @@ public class ServerThread extends Thread {
 		return c;
 	}
 
-	public void sendACK() throws IOException {
+	public void sendACK(boolean ack) throws IOException {
+		byte[] ackBytes = null;
+		
+		if(ack)
+			ackBytes = "ACK".getBytes("UTF-8");			
+		else ackBytes = "NOACK".getBytes("UTF-8");
+		
 		byte[] wtsBytes = Integer.toString(wts).getBytes("UTF-8");
-		byte[] ackBytes = "ack".getBytes("UTF-8");
 		byte[] msgWtsBytes = concatenate(wtsBytes, ackBytes);
 		out.writeInt(wtsBytes.length);
 		out.writeInt(msgWtsBytes.length);
