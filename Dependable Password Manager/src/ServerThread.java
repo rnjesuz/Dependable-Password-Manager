@@ -326,24 +326,6 @@ public class ServerThread extends Thread {
 					System.out.println("Follower Sending register value to leader");
 					sigSize = in.readInt();
 					
-					
-					/*int newCounter = calculateCounter();
-					System.out.println("caculated counter: "+ newCounter);
-					counter = newCounter;
-					byte[] challengeResponse = Integer.toString(newCounter).getBytes("UTF-8");
-					int cr = challengeResponse.length;
-					out.writeInt(cr);
-					msg = concatenate(challengeResponse, getPublicKey(sigSize).getEncoded());
-					out.writeInt(msg.length);
-					System.out.println("Signing Request with Client Private Key");
-					msgSign = concatenate(msg, signature(msg));// creates
-																														// MSG+SIG
-					System.out.println("=============================================================");
-					System.out.println("=============================================================");
-					toSend = sessionEncrypt(sessionKey, iv , msgSign);// Cipher
-					System.out.println("Ciphered signed request: " + (new String(toSend)));
-					out.writeInt(toSend.length);// Sends total length
-					out.write(toSend);// Sends {MSG+SIG}serverpubkey*/
 					counter = sendRefactor(getPublicKey(sigSize).getEncoded(), counter, sessionKey, iv, out);
 					System.out.println("sent saved key to leader");
 
@@ -568,20 +550,13 @@ public class ServerThread extends Thread {
 						System.out.println("Writeback");
 						break;
 					} else {
-						if(!pass.equals(output.get(0))) {
+						if(!Arrays.equals(pass, output.get(0))) {
 							System.out.println("Overwrite");
+							put(getPublicKey(output.get(1).length), domain, username, output.get(0), output.get(1));
 						}
-						//ERRORFIX
-						//YOOOOOOO
-						//THE PROBLEM IS RIGHT HERE!!!!
-						msg = "ACK".getBytes("UTF-8");
-						sig = signature(msg);
-						msgSign = concatenate(msg,sig);
-						toSend = sessionEncrypt(sessionKey,iv,msgSign);
 						
-						out.writeInt(toSend.length);
-						out.writeInt(msg.length);
-						out.write(toSend);
+						counter = sendRefactor("ACK".getBytes("UTF-8"), counter, sessionKey, iv, out);
+						
 					}
 					
 					break;
@@ -664,18 +639,6 @@ public class ServerThread extends Thread {
 			
 			actualizedCounter = sendRefactor("put_to_leader".getBytes("UTF-8"), counters.get(i), sk, iv, out);
 			counters.set(i, actualizedCounter);
-			/*System.out.println("Requesting follower to put_to_leader");
-			commandBytes = "put_to_leader".getBytes("UTF-8");
-			newCounter = calculateCounterServer(counters.get(i));
-			counters.set(i, newCounter);
-			challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
-			out.writeInt(challengeResponse.length);
-			msg = concatenate(challengeResponse, commandBytes);
-			out.writeInt(msg.length);
-			msgSign = concatenate(msg, signature(msg));// creates MSG+SIG
-			toSend = sessionEncrypt(sk, iv , msgSign);// Cipher
-			out.writeInt(toSend.length);// Sends total length
-			out.write(toSend);// Sends {MSG+SIG}serverpubkey*/
 			
 			//in put_to_leader
 			out.writeInt(sigClient.length);//sends size of client signature to follower
@@ -685,18 +648,7 @@ public class ServerThread extends Thread {
 			
 			actualizedCounter = sendRefactor(domain, counters.get(i), sk, iv, out);
 			counters.set(i, actualizedCounter);
-			/*newCounter = calculateCounterServer(counters.get(i));
-			counters.set(i, newCounter);
-			challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
-			msg = concatenate(challengeResponse, domain);//challengeResponse + domain
-			msgSign = concatenate(msg, signature(msg));// creates MSG+SIG
-			toSend = sessionEncrypt(sk, iv , msgSign);// Cipher
 			
-			out.writeInt(challengeResponse.length);//sends length of cr
-			out.writeInt(msg.length);//sends length of cr+msg
-			out.writeInt(toSend.length);// Sends total length
-			
-			out.write(toSend);// Sends {MSG+SIG}serverpubkey*/
 			
 			System.out.println("Sent domain to Follower");
 			
@@ -704,19 +656,7 @@ public class ServerThread extends Thread {
 			
 			actualizedCounter = sendRefactor(username, counters.get(i), sk, iv, out);
 			counters.set(i, actualizedCounter);
-			/*
-			newCounter = calculateCounterServer(counters.get(i));
-			counters.set(i, newCounter);
-			challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
-			msg = concatenate(challengeResponse, username);//challengeResponse + domain
-			msgSign = concatenate(msg, signature(msg));// creates MSG+SIG
-			toSend = sessionEncrypt(sk, iv , msgSign);// Cipher
 			
-			out.writeInt(challengeResponse.length);//sends length of cr
-			out.writeInt(msg.length);//sends length of cr+msg
-			out.writeInt(toSend.length);// Sends total length
-			
-			out.write(toSend);// Sends {MSG+SIG}serverpubkey*/
 			
 			System.out.println("Sent username to Follower");
 			
@@ -752,8 +692,14 @@ public class ServerThread extends Thread {
 	    boolean sendAck = true;
 	    if (!(count > values.size()/2)) {
 	    	sendAck = false;
-	    	System.out.println("No consensus Reached");
+	    	System.out.println("No consensus reached");
+	    	return;
 	    }		
+	    
+	    if(!Arrays.equals(majorityElement.getBytes("UTF-8"), password)) {
+			System.out.println("Leader Overwrite");
+			put(getPublicKey(sigClient.length), domain, username, majorityElement.getBytes("UTF-8"), sigClient);
+		}
 	    
 		for (int i = 0; i < sessionKeys.size(); i++) {
 			SecretKey sk = sessionKeys.get(i);
@@ -768,20 +714,7 @@ public class ServerThread extends Thread {
 				
 				actualizedCounter = sendRefactor(username, counters.get(i), sk, iv, out);
 				counters.set(i, actualizedCounter);
-				/*
-				newCounter = calculateCounterServer(counters.get(i));
-				counters.set(i, newCounter);
-				challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
-				msg = concatenate(challengeResponse, majorityElement.getBytes("UTF-8"));//challengeResponse + domain
-				msgSign = concatenate(msg, signature(msg));// creates MSG+SIG
-				toSend = sessionEncrypt(sk, iv , msgSign);// Cipher
 				
-				out.writeInt(challengeResponse.length);//sends length of cr
-				out.writeInt(msg.length);//sends length of cr+msg
-				out.writeInt(toSend.length);// Sends total length
-				
-				out.write(toSend);// Sends {MSG+SIG}serverpubkey
-				*/
 				System.out.println("Sent pass to write to Followers");
 				
 				System.out.println("Waiting for follower response");
@@ -945,57 +878,6 @@ public class ServerThread extends Thread {
 
 	private void connectServerServer(Key k) throws UnknownHostException, IOException {
 
-		/*int crLength = in.readInt();
-		int msgCrLength = in.readInt();
-		int lenght = in.readInt();
-		byte[] inputByte = new byte[lenght];
-		in.readFully(inputByte, 0, lenght);
-		int id = in.readInt();
-		byte[] decipherInput;
-		byte[] msgCr;
-		byte[] cr ;
-		byte[] msg = null;
-		byte[] sig = null;
-		
-		decipherInput = sessionDecrypt(sessionKey, iv, inputByte);
-		msgCr = Arrays.copyOfRange(decipherInput, 0, msgCrLength);
-		cr = Arrays.copyOfRange(msgCr, 0, crLength);
-		msg = Arrays.copyOfRange(msgCr, crLength, msgCrLength);
-		sig = Arrays.copyOfRange(decipherInput, msgCrLength, decipherInput.length);
-		
-		String tag = new String(msg, "UTF-8");
-		
-		System.out.println("RECEBI ESTA TAG: " + tag);
-		
-		if(id==0){
-			//Uses Client Key
-			System.out.println("SOU UM CLIENTE");
-			
-		} else{ 
-			//Uses Server Key
-				k = pubKey;
-				System.out.println("SOU UM SERVER");
-				
-		}
-		
-		if (!verifySignature(k, sig, msg)) {
-			System.out.println("Signature not verified, no action taken");
-			return;
-		}
-		
-		
-		
-		int proposedCounter = Integer.parseInt(new String(cr, "UTF-8"));
-		
-		if (proposedCounter != calculateCounter()) {
-			System.out.println("proposed counter: "+proposedCounter);
-			System.out.println("calculated counter: "+calculateCounter());
-			System.out.println("Challenge Response failed");
-			return;
-		}
-		counter = proposedCounter;
-		
-		if (tag.equals("leader")) {*/
 			for (int i = 8080; i <= 8084; i++) {
 				if (i != _port) {
 					sockets.add(new Socket("localhost", i));
@@ -1013,11 +895,6 @@ public class ServerThread extends Thread {
 			sendUsername();
 			challengeResponse();
 			System.out.println("tamanhoooo: "+sockets.size());
-			/*sendTag();
-		}
-		else if(tag.equals("follower")){//DOES NOTHING
-			System.out.println("received follower tag");
-			}*/
 			
 	}
 	
