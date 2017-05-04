@@ -135,8 +135,9 @@ public class ServerThread extends Thread {
 			}
 
 			String input = new String(msg, "UTF-8");
-			String [] usrns = input.split("|");
-			clientUsername = usrns[0];
+			//String [] usrns = input.split("|");
+			//clientUsername = usrns[0];
+			clientUsername = input;
 
 		/*	System.out.println("################################################");
 			System.out.println("RECEIVED MSG:");
@@ -249,7 +250,7 @@ public class ServerThread extends Thread {
 				input = new String(msg, "UTF-8");
 				
 				} catch (IOException e) {
-					if(usrns.length>1)
+					//if(usrns.length>1)
 					System.out.println("Connection Severed 54120");
 					return;
 					//e.printStackTrace();
@@ -1012,6 +1013,7 @@ public class ServerThread extends Thread {
 		
 		
 		for (int i = 0; i < sessionKeys.size(); i++) {
+			try{
 			SecretKey sk = sessionKeys.get(i);
 			IvParameterSpec iv = ivs.get(i);
 			DataOutputStream out = outs.get(i);
@@ -1032,7 +1034,17 @@ public class ServerThread extends Thread {
 			counters.set(i, Integer.parseInt(new String (output.get(3))));
 			
 			values.add(output.get(0));			
-		}
+		} catch (IOException e) {
+			System.out.println("Connection Severed");
+			outs.remove(i);
+			ins.remove(i);
+			sockets.remove(i);
+			counters.remove(i);
+			ivs.remove(i);
+			sessionKeys.remove(i);
+			i--;
+			//e.printStackTrace();
+		}}
 		
 		//CHECKS THE MAJORITY ELEMENT
 		int count = 0;
@@ -1056,6 +1068,7 @@ public class ServerThread extends Thread {
 	    }		
 	    
 		for (int i = 0; i < sessionKeys.size(); i++) {
+			try{
 			SecretKey sk = sessionKeys.get(i);
 			IvParameterSpec iv = ivs.get(i);
 			DataOutputStream out = outs.get(i);
@@ -1087,6 +1100,17 @@ public class ServerThread extends Thread {
 				
 				registerWriteBack(Integer.toString(_port) + File.separator + clientUsername );
 			}			
+		} catch (IOException e) {
+			System.out.println("Connection Severed");
+			outs.remove(i);
+			ins.remove(i);
+			sockets.remove(i);
+			counters.remove(i);
+			ivs.remove(i);
+			sessionKeys.remove(i);
+			i--;
+			//e.printStackTrace();
+		}
 		}
 		
 		//(n+f)/2 
@@ -1172,7 +1196,8 @@ public class ServerThread extends Thread {
 
 		// out.flush();
 
-		String usrn = clientUsername+"| server";
+		//String usrn = clientUsername+"|server";
+		String usrn = clientUsername;
 		byte[] msgSign1 = encrypt(usrn.getBytes("UTF-8"), pubKey);
 		byte[] sig0 = signature(usrn.getBytes("UTF-8"));
 		byte[] sigPart1 = encrypt(Arrays.copyOfRange(sig0, 0, (sig0.length / 2)), pubKey);
