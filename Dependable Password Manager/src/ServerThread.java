@@ -829,7 +829,7 @@ public class ServerThread extends Thread {
 		//(n+f)/2 
 		if(acks >= 4) {
 			sendACK(true);
-			if(Arrays.equals(majorityElement, getPublicKey(sigClient.length).getEncoded())) {
+			if(!Arrays.equals(majorityElement, getPublicKey(sigClient.length).getEncoded())) {
 				System.out.println("Overwrite");
 				
 				X509EncodedKeySpec ks = new X509EncodedKeySpec(majorityElement);
