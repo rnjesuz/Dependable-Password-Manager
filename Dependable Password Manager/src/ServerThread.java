@@ -276,7 +276,7 @@ public class ServerThread extends Thread {
 						register(receivePublicKey(), output.get(1));
 						wts = c_wts;
 					} else
-						System.out.println("shit");
+						System.out.println("error in wts");
 
 					//ask followers for what they wrote
 					
@@ -317,7 +317,7 @@ public class ServerThread extends Thread {
 						register(receivePublicKey(), output.get(1));
 						wts = c_wts;
 					} else {
-						System.out.println("shit");
+						System.out.println("error in wts");
 					}
 					
 					break;
@@ -328,17 +328,6 @@ public class ServerThread extends Thread {
 					
 					counter = sendRefactor(getPublicKey(sigSize).getEncoded(), counter, sessionKey, iv, out);
 					System.out.println("sent saved key to leader");
-
-					
-				/*	//Receiving ACK from leader
-					System.out.println("ACK FROM LEADER - prt1 - the ack menace");
-					msgLenght = in.readInt();
-					lenght = in.readInt();
-					System.out.println("ACK FROM LEADER - prt2 - the attack of the acks");
-					inputByte = new byte[lenght];
-							
-					in.readFully(inputByte);
-					System.out.println("ACK FROM LEADER - part 3 - the revenge from the acks");*/
 					
 					System.out.println("waiting response from leader");
 					
@@ -348,25 +337,26 @@ public class ServerThread extends Thread {
 					if("NOACK".equals(new String(output.get(0), "UTF-8"))) {
 						break;
 					} else {
-
 						System.out.println("ACK received check if different");
-						/*newCounter = calculateCounter();
-						System.out.println("caculated counter: "+newCounter);
-						challengeResponse = Integer.toString(counter).getBytes("UTF-8");
-						cr = challengeResponse.length;
-						out.writeInt(cr);
-						msg = concatenate(challengeResponse, "ACK".getBytes("UTF-8"));
-						out.writeInt(msg.length);
-						System.out.println("Signing Request with Client Private Key");
-						msgSign = concatenate(msg, signature(msg));// creates
-																															// MSG+SIG
-						System.out.println("=============================================================");
-						System.out.println("=============================================================");
-						toSend = sessionEncrypt(sessionKey, iv , msgSign);// Cipher
-						System.out.println("Ciphered signed request: " + (new String(toSend)));
-						out.writeInt(toSend.length);// Sends total length
-						out.write(toSend);// Sends {MSG+SIG}serverpubkey
-						System.out.println("Request Sent");*/
+						
+						String leader = DatatypeConverter.printHexBinary(output.get(0));
+						String follower  = DatatypeConverter.printHexBinary(getPublicKey(sigSize).getEncoded());
+						
+						System.out.println("LEADER: " + leader);
+						System.out.println("FOLLOWER: " + follower);
+						
+						if(!Arrays.equals(output.get(0), getPublicKey(sigSize).getEncoded())) {
+							System.out.println("Overwrite");
+							
+							X509EncodedKeySpec ks = new X509EncodedKeySpec(output.get(0));
+
+							KeyFactory kf = KeyFactory.getInstance("RSA");
+							PublicKey key = kf.generatePublic(ks);
+							
+							register(key, getClientSig(sigSize));
+							System.out.println("Overwrite DONE");
+						}
+						
 						counter = sendRefactor("ACK".getBytes("UTF-8"), counter, sessionKey, iv, out);
 					}
 					
@@ -438,7 +428,7 @@ public class ServerThread extends Thread {
 						name = put(getPublicKey(sig.length), putDomain, putUsername, putPass, sig);
 						wts = c_wts;
 					} else
-						System.out.println("shit");
+						System.out.println("error in wts");
 
 					
 					askPutCommand(putDomain, putUsername, putPass, output.get(1));
@@ -504,7 +494,7 @@ public class ServerThread extends Thread {
 						fileName = put(getPublicKey(sig.length), putDomain, putUsername, putPass, sig);
 						wts = c_wts;
 					} else
-						System.out.println("shit");
+						System.out.println("error in wts");
 
 					break;
 					
@@ -750,7 +740,7 @@ public class ServerThread extends Thread {
 		
 	}
 
-	private void askRegisterCommand(byte[] sigClient) throws IOException {
+	private void askRegisterCommand(byte[] sigClient) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
 		
 		System.out.println("registercommand");
 		ArrayList<byte[]> values = new ArrayList<byte[]>();		
@@ -771,19 +761,7 @@ public class ServerThread extends Thread {
 			
 			byte[] commandBytes;
 			commandBytes = "register_to_leader".getBytes("UTF-8");
-			//out.writeInt(commandBytes.length);
-			
-			/*int newCounter = calculateCounterServer(counters.get(i));
-			counters.set(i, newCounter);
-			byte[] challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
-			int cr = challengeResponse.length;
-			out.writeInt(cr);
-			msg = concatenate(challengeResponse, commandBytes);
-			out.writeInt(msg.length);
-			msgSign = concatenate(msg, signature(msg));// creates MSG+SIG
-			toSend = sessionEncrypt(sk, iv , msgSign);// Cipher
-			out.writeInt(toSend.length);// Sends total length
-			out.write(toSend);// Sends {MSG+SIG}serverpubkey*/
+
 			actualizedCounter = sendRefactor(commandBytes, crCounter, sk, iv, out);
 			counters.set(i, actualizedCounter);
 			
@@ -797,20 +775,18 @@ public class ServerThread extends Thread {
 		
 		//CHECKS THE MAJORITY ELEMENT
 		int count = 0;
-		String majorityElement = null;
+		byte[] majorityElement = null;
 	    for (int i = 0; i < values.size(); i++) {
-	    	String aux = new String(values.get(i),"UTF-8");
 	        if (count == 0)
-	            majorityElement = aux;
-	        if (aux.equals(majorityElement)) 
+	            majorityElement = values.get(i);
+	        if (Arrays.equals(values.get(i),majorityElement)) 
 	            count++;
 	        else
 	            count--;
 	    }
 	    count = 0;
 	    for (int i = 0; i < values.size(); i++) {
-	    	String aux = new String(values.get(i),"UTF-8");
-	        if (aux.equals(majorityElement))
+	        if (Arrays.equals(values.get(i),majorityElement))
 	            count++;
 	    }
 	    boolean sendAck = true;
@@ -828,28 +804,9 @@ public class ServerThread extends Thread {
 			
 			if(sendAck) {
 				
-				/*int newCounter = calculateCounterServer(counters.get(i));
-				counters.set(i, newCounter);
-				System.out.println("caculated counter: "+newCounter);
-				byte[] challengeResponse = Integer.toString(newCounter).getBytes("UTF-8");
-				int cr = challengeResponse.length;
-				out.writeInt(cr);
-				msg = concatenate(challengeResponse, majorityElement.getBytes("UTF-8"));
-				out.writeInt(msg.length);
-				System.out.println("Signing Request with Client Private Key");
-				msgSign = concatenate(msg, signature(msg));// creates
-																													// MSG+SIG
-				System.out.println("=============================================================");
-				System.out.println("=============================================================");
-				toSend = sessionEncrypt(sk, iv , msgSign);// Cipher
-				System.out.println("Ciphered signed request: " + (new String(toSend)));
-				out.writeInt(toSend.length);// Sends total length
-				out.write(toSend);// Sends {MSG+SIG}serverpubkey
-				System.out.println("Request Sent");*/
-				
 				System.out.println("Send Ack to " + i);
 				
-				actualizedCounter = sendRefactor(majorityElement.getBytes("UTF-8"), crCounter, sk, iv, out);
+				actualizedCounter = sendRefactor(majorityElement, crCounter, sk, iv, out);
 				counters.set(i, actualizedCounter);
 				
 				System.out.println("Receiving ack from " + i);
@@ -866,13 +823,24 @@ public class ServerThread extends Thread {
 				sig = signature(msg);
 				msgSign = concatenate(msg, sig);
 				toSend = sessionEncrypt(sk, iv, msgSign);
-				//TODO
 			}			
 		}
 		
 		//(n+f)/2 
-		if(acks >= 4)
+		if(acks >= 4) {
 			sendACK(true);
+			if(Arrays.equals(majorityElement, getPublicKey(sigClient.length).getEncoded())) {
+				System.out.println("Overwrite");
+				
+				X509EncodedKeySpec ks = new X509EncodedKeySpec(majorityElement);
+
+				KeyFactory kf = KeyFactory.getInstance("RSA");
+				PublicKey key = kf.generatePublic(ks);
+				
+				register(key, sigClient);
+				System.out.println("Overwrite DONE");
+			}
+		}
 		else sendACK(false);
 	}
 
@@ -1339,6 +1307,41 @@ public class ServerThread extends Thread {
 			e.printStackTrace();
 		}
 
+		return output;
+	}
+	
+	public byte[] getClientSig(int sigSize) {
+
+		byte[] outputbytes =null;
+		byte[] output = null;
+		
+		try {
+			
+			File file = new File(
+					Integer.toString(_port) + File.separator + clientUsername + File.separator + "publicKey");
+			FileInputStream fis = new FileInputStream(file);
+			int fileSize = fis.available();
+			outputbytes = new byte[fileSize];
+			
+			System.out.println("Sig size: " + sigSize);
+			System.out.println("file size: " + fileSize);
+			
+			fis.read(outputbytes);
+			
+			output = Arrays.copyOfRange(outputbytes, fileSize-sigSize, fileSize);
+
+			System.out.println("CLIENT SIG: " + output);
+
+			fis.close();
+			
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 		return output;
 	}
 
