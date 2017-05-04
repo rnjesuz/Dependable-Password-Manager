@@ -599,10 +599,8 @@ public class ServerThread extends Thread {
 					output.clear();
 					output = get(getPublicKey(256), getDomain, getUsername, 256);
 					
-					out.writeInt(output.get(0).length);
-					out.writeInt(output.get(2).length);
-					out.write(output.get(2));
-
+					askGetCommand(getDomain, getUsername, output.get(0));
+					
 					break;
 
 				default:
@@ -615,6 +613,18 @@ public class ServerThread extends Thread {
 			e.printStackTrace();
 			return;
 		}
+	}
+	
+	private void askGetCommand(byte[] domain, byte[] username){
+		System.out.println("getcommand");
+		ArrayList<byte[]> values = new ArrayList<byte[]>();
+		ArrayList<byte[]> output = new ArrayList<byte[]>();
+		
+		int acks = 0, newCounter = 0, actualizedCounter=0;
+		byte[] msg = null,  msgSign = null, 
+				toSend = null, challengeResponse = null, commandBytes = null;
+		
+		values.add(password);
 	}
 
 	private void askPutCommand(byte[] domain, byte[] username, byte[] password, byte[] sigClient) throws IOException {
