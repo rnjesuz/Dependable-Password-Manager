@@ -1049,5 +1049,40 @@ public class Client {
 
 		return null;
 	}
+	
+	public ArrayList<byte[]> msgRefactor(int challengeResponse, SecretKey sessionKey, IvParameterSpec iv, Key k, DataInputStream in) throws IOException {
+		int crLength = in.readInt();
+		int msgCrLength = in.readInt();
+		int lenght = in.readInt();
+		byte[] inputByte = new byte[lenght];
+		in.readFully(inputByte, 0, lenght);
+		byte[] decipherInput = sessionDecrypt(sessionKey, iv, inputByte);
+		byte[] msg = Arrays.copyOfRange(decipherInput, 0, msgCrLength);
+		byte[] sig = Arrays.copyOfRange(decipherInput, msgCrLength, decipherInput.length);
+
+		if (!verifySignature(sig, msg)) {
+			System.out.println("Signature not verified, no action taken");
+			return null;
+		}
+
+		byte[] counterBytes = Arrays.copyOfRange(msg, 0, crLength);
+		msg = Arrays.copyOfRange(msg, crLength, msgCrLength);
+		int proposedCounter = Integer.parseInt(new String(counterBytes, "UTF-8"));
+		
+		System.out.println(proposedCounter +  "          :           "  + calculateCounter(challengeResponse) );
+
+		if (proposedCounter != calculateCounter(challengeResponse)) {
+			System.out.println("Challenge Response failed");
+			return null;
+		}
+
+		ArrayList<byte[]> output = new ArrayList<byte[]>();
+		output.add(msg);
+		output.add(sig);
+		output.add(inputByte);
+		output.add(counterBytes);
+
+		return output;
+	}
 
 }

@@ -34,6 +34,9 @@ import java.util.zip.Deflater;
 import javax.xml.bind.DatatypeConverter;
 
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import javax.crypto.*;
 import javax.crypto.spec.IvParameterSpec;
@@ -335,6 +338,9 @@ public class ServerThread extends Thread {
 					counter = Integer.parseInt(new String (output.get(3)));
 					
 					if("NOACK".equals(new String(output.get(0), "UTF-8"))) {
+						
+						registerWriteBack(Integer.toString(_port) + File.separator + clientUsername );
+						
 						break;
 					} else {
 						System.out.println("ACK received check if different");
@@ -536,8 +542,12 @@ public class ServerThread extends Thread {
 					output = msgRefactor(counter, sessionKey, iv, pubKey, in);
 					counter = Integer.parseInt(new String(output.get(3), "UTF-8"));
 					
+					
 					if("NOACK".equals(new String(output.get(0), "UTF-8"))) {
 						System.out.println("Writeback");
+						
+						putWriteBack(domain, username);
+						
 						break;
 					} else {
 						if(!Arrays.equals(pass, output.get(0))) {
@@ -585,8 +595,9 @@ public class ServerThread extends Thread {
 					System.out.println(new String(output.get(1), "UTF-8"));
 					System.out.println("################################################");
 					System.out.println("");
-
-					output = get(getPublicKey(output.get(1).length), getDomain, getUsername, output.get(1).length);
+					
+					output.clear();
+					output = get(getPublicKey(256), getDomain, getUsername, 256);
 					
 					out.writeInt(output.get(0).length);
 					out.writeInt(output.get(2).length);
@@ -663,20 +674,18 @@ public class ServerThread extends Thread {
 		//CHECKS THE MAJORITY ELEMENT
 		System.out.println("Checking for majority element");
 		int count = 0;
-		String majorityElement = null;
+		byte[] majorityElement = null;
 	    for (int i = 0; i < values.size(); i++) {
-	    	String aux = new String(values.get(i),"UTF-8");
 	        if (count == 0)
-	            majorityElement = aux;
-	        if (aux.equals(majorityElement)) 
+	            majorityElement = values.get(i);
+	        if (Arrays.equals(values.get(i),majorityElement)) 
 	            count++;
 	        else
 	            count--;
 	    }
 	    count = 0;
 	    for (int i = 0; i < values.size(); i++) {
-	    	String aux = new String(values.get(i),"UTF-8");
-	        if (aux.equals(majorityElement))
+	        if (Arrays.equals(values.get(i),majorityElement))
 	            count++;
 	    }
 	    boolean sendAck = true;
@@ -686,9 +695,9 @@ public class ServerThread extends Thread {
 	    	return;
 	    }		
 	    
-	    if(!Arrays.equals(majorityElement.getBytes("UTF-8"), password)) {
+	    if(!Arrays.equals(majorityElement, password)) {
 			System.out.println("Leader Overwrite");
-			put(getPublicKey(sigClient.length), domain, username, majorityElement.getBytes("UTF-8"), sigClient);
+			put(getPublicKey(sigClient.length), domain, username, majorityElement, sigClient);
 		}
 	    
 		for (int i = 0; i < sessionKeys.size(); i++) {
@@ -702,7 +711,7 @@ public class ServerThread extends Thread {
 				
 				System.out.println("Sending pass to followers");
 				
-				actualizedCounter = sendRefactor(username, counters.get(i), sk, iv, out);
+				actualizedCounter = sendRefactor(majorityElement, counters.get(i), sk, iv, out);
 				counters.set(i, actualizedCounter);
 				
 				System.out.println("Sent pass to write to Followers");
@@ -718,7 +727,7 @@ public class ServerThread extends Thread {
 				
 			} else {
 				//SEND WRITEBACK TO FOLLOWERS
-				newCounter = calculateCounterServer(counters.get(i));
+				/*newCounter = calculateCounterServer(counters.get(i));
 				counters.set(i, newCounter);
 				challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
 				msg = concatenate(challengeResponse, "NOACK".getBytes("UTF-8"));//challengeResponse + domain
@@ -729,7 +738,11 @@ public class ServerThread extends Thread {
 				out.writeInt(msg.length);//sends length of cr+msg
 				out.writeInt(toSend.length);// Sends total length
 				
-				out.write(toSend);// Sends {MSG+SIG}serverpubkey
+				out.write(toSend);// Sends {MSG+SIG}serverpubkey*/
+				putWriteBack(domain, username);
+				int counter = sendRefactor("NOACK".getBytes("UTF-8"), counters.get(i), sk, iv, out);
+				counters.set(i, counter);
+				
 			}			
 		}
 		
@@ -823,6 +836,8 @@ public class ServerThread extends Thread {
 				sig = signature(msg);
 				msgSign = concatenate(msg, sig);
 				toSend = sessionEncrypt(sk, iv, msgSign);
+				
+				registerWriteBack(Integer.toString(_port) + File.separator + clientUsername );
 			}			
 		}
 		
@@ -1561,5 +1576,60 @@ public class ServerThread extends Thread {
 		byte[] toSendBytes = sessionEncrypt(sessionKey, iv, msgSigned);
 		out.writeInt(toSendBytes.length);
 		out.write(toSendBytes);
+	}
+	
+	public void putWriteBack(byte[] domain, byte[] username){
+		StringBuilder hexString = new StringBuilder();
+		for (int i = 0; i < domain.length; i++) {
+			String hex = Integer.toHexString(0xFF & domain[i]);
+			if (hex.length() == 1)
+				hexString.append('0');
+
+			hexString.append(hex);
+		}
+
+		for (int i = 0; i < username.length; i++) {
+			String hex = Integer.toHexString(0xFF & domain[i]);
+			if (hex.length() == 1)
+				hexString.append('0');
+
+			hexString.append(hex);
+		}
+		try {
+			String filename = hexString.toString().toUpperCase();
+			Path path = Paths.get(filename);
+			if(lastPassSaved == null){
+				System.out.println("Deleting File");
+				
+				Files.delete(path);
+				
+			}
+			else{
+				System.out.println("Putting Last Saved Password");
+				FileOutputStream fos = new FileOutputStream(
+						Integer.toString(_port) + File.separator + clientUsername + File.separator + filename);
+				
+				fos.write(lastPassSaved);
+				fos.close();
+			}
+		} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+	}
+	
+	public void registerWriteBack(String filename){
+		try {
+			Path pathFilename = Paths.get(filename);
+			if(lastPassSaved == null){
+				System.out.println("Deleting File");
+				
+				Files.delete(pathFilename);
+
+			}
+		} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 	}
 }
