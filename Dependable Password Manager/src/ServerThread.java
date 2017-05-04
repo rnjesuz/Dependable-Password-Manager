@@ -10,6 +10,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.Socket;
+import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.security.InvalidKeyException;
 import java.security.Key;
@@ -134,9 +135,10 @@ public class ServerThread extends Thread {
 			}
 
 			String input = new String(msg, "UTF-8");
-			clientUsername = input;
+			String [] usrns = input.split("|");
+			clientUsername = usrns[0];
 
-			System.out.println("################################################");
+		/*	System.out.println("################################################");
 			System.out.println("RECEIVED MSG:");
 			System.out.println(new String(inputByte, "UTF-8"));
 			System.out.println("================================================");
@@ -146,7 +148,7 @@ public class ServerThread extends Thread {
 			System.out.println("SIGNATURE:");
 			System.out.println(new String(sig, "UTF-8"));
 			System.out.println("################################################");
-			System.out.println("");
+			System.out.println("");*/
 			// ======================================================================================================================================
 			// generating sessionKey
 			KeyGenerator keyGen = KeyGenerator.getInstance("AES");
@@ -166,7 +168,6 @@ public class ServerThread extends Thread {
 			byte[] sigPart1 = encrypt(Arrays.copyOfRange(sig0, 0, (sig0.length / 2)), k);
 			byte[] sigPart2 = encrypt(Arrays.copyOfRange(sig0, (sig0.length / 2), sig0.length), k);
 			byte[] sessionCipher = concatenate(msgSign1, sigPart1);
-			System.out.println("AHHHHHHHHHHHHHHH " + sessionCipher.length);
 			out.writeInt(sessionCipher.length);
 			out.writeInt(msgSign1.length);
 			out.write(sessionCipher);
@@ -204,7 +205,7 @@ public class ServerThread extends Thread {
 			System.out.println("Ready For Commands");
 			// =========================================================================
 			while (socket.isConnected()) {
-				
+				try{
 				// preparing variables for command requests
 				//msgLenght = in.readInt();
 				crLength = in.readInt();
@@ -233,7 +234,7 @@ public class ServerThread extends Thread {
 				}
 				counter = proposedCounter;
 					
-				System.out.println("################################################");
+			/*	System.out.println("################################################");
 				System.out.println("RECEIVED MSG:");
 				System.out.println(new String(inputByte, "UTF-8"));
 				System.out.println("================================================");
@@ -243,10 +244,17 @@ public class ServerThread extends Thread {
 				System.out.println("SIGNATURE:");
 				System.out.println(new String(sig, "UTF-8"));
 				System.out.println("################################################");
-				System.out.println("");
+				System.out.println("");*/
 
 				input = new String(msg, "UTF-8");
-
+				
+				} catch (IOException e) {
+					if(usrns.length>1)
+					System.out.println("Connection Severed 54120");
+					return;
+					//e.printStackTrace();
+				}
+				
 				switch (input) {
 
 				case "martelo":
@@ -259,7 +267,7 @@ public class ServerThread extends Thread {
 					output = msgRefactor(counter, sessionKey, iv, k, in);
 					counter = Integer.parseInt(new String(output.get(3), "UTF-8"));
 
-					System.out.println("################################################");
+				/*	System.out.println("################################################");
 					System.out.println("RECEIVED MSG:");
 					System.out.println(new String(output.get(2), "UTF-8"));
 					System.out.println("================================================");
@@ -269,7 +277,7 @@ public class ServerThread extends Thread {
 					System.out.println("SIGNATURE:");
 					System.out.println(new String(output.get(1), "UTF-8"));
 					System.out.println("################################################");
-					System.out.println("");
+					System.out.println("");*/
 
 					counterBytes = output.get(0);
 
@@ -300,7 +308,7 @@ public class ServerThread extends Thread {
 					output = msgRefactor(counter, sessionKey, iv, k, in);
 					counter = Integer.parseInt(new String(output.get(3), "UTF-8"));
 
-					System.out.println("################################################");
+				/*	System.out.println("################################################");
 					System.out.println("RECEIVED MSG:");
 					System.out.println(new String(output.get(2), "UTF-8"));
 					System.out.println("================================================");
@@ -310,7 +318,7 @@ public class ServerThread extends Thread {
 					System.out.println("SIGNATURE:");
 					System.out.println(new String(output.get(1), "UTF-8"));
 					System.out.println("################################################");
-					System.out.println("");
+					System.out.println("");*/
 
 					counterBytes = output.get(0);
 					
@@ -383,7 +391,7 @@ public class ServerThread extends Thread {
 					putDomain = output.get(0);
 					// input = new String(msg, "UTF-8");
 
-					System.out.println("################################################");
+				/*	System.out.println("################################################");
 					System.out.println("RECEIVED MSG:");
 					System.out.println(new String(output.get(2), "UTF-8"));
 					System.out.println("================================================");
@@ -393,13 +401,13 @@ public class ServerThread extends Thread {
 					System.out.println("SIGNATURE:");
 					System.out.println(new String(output.get(1), "UTF-8"));
 					System.out.println("################################################");
-					System.out.println("");
+					System.out.println("");*/
 
 					output = msgRefactor(counter, sessionKey, iv, k, in);
 					counter = Integer.parseInt(new String(output.get(3), "UTF-8"));
 					putUsername = output.get(0);
 
-					System.out.println("################################################");
+					/*System.out.println("################################################");
 					System.out.println("RECEIVED MSG:");
 					System.out.println(new String(output.get(2), "UTF-8"));
 					System.out.println("================================================");
@@ -409,18 +417,18 @@ public class ServerThread extends Thread {
 					System.out.println("SIGNATURE:");
 					System.out.println(new String(output.get(1), "UTF-8"));
 					System.out.println("################################################");
-					System.out.println("");
+					System.out.println("");*/
 
 					lenght = in.readInt();
 					inputByte = new byte[lenght];
 					in.readFully(inputByte, 0, inputByte.length);
 					putPass = inputByte;
 
-					System.out.println("################################################");
+					/*System.out.println("################################################");
 					System.out.println("RECEIVED PASS:");
 					System.out.println(new String(inputByte, "UTF-8"));
 					System.out.println("################################################");
-					System.out.println("");
+					System.out.println("");*/
 
 					output = msgRefactor(counter, sessionKey, iv, k, in);
 					counter = Integer.parseInt(new String(output.get(3), "UTF-8"));
@@ -449,7 +457,7 @@ public class ServerThread extends Thread {
 					putDomain = output.get(0);
 					// input = new String(msg, "UTF-8");
 
-					System.out.println("################################################");
+				/*	System.out.println("################################################");
 					System.out.println("RECEIVED MSG:");
 					System.out.println(new String(output.get(2), "UTF-8"));
 					System.out.println("================================================");
@@ -459,13 +467,13 @@ public class ServerThread extends Thread {
 					System.out.println("SIGNATURE:");
 					System.out.println(new String(output.get(1), "UTF-8"));
 					System.out.println("################################################");
-					System.out.println("");
+					System.out.println("");*/
 
 					output = msgRefactor(counter, sessionKey, iv, k, in);
 					counter = Integer.parseInt(new String(output.get(3), "UTF-8"));
 					putUsername = output.get(0);
 
-					System.out.println("################################################");
+				/*	System.out.println("################################################");
 					System.out.println("RECEIVED MSG:");
 					System.out.println(new String(output.get(2), "UTF-8"));
 					System.out.println("================================================");
@@ -475,18 +483,18 @@ public class ServerThread extends Thread {
 					System.out.println("SIGNATURE:");
 					System.out.println(new String(output.get(1), "UTF-8"));
 					System.out.println("################################################");
-					System.out.println("");
+					System.out.println("");*/
 
 					lenght = in.readInt();
 					inputByte = new byte[lenght];
 					in.readFully(inputByte, 0, inputByte.length);
 					putPass = inputByte;
 
-					System.out.println("################################################");
+				/*	System.out.println("################################################");
 					System.out.println("RECEIVED PASS:");
 					System.out.println(new String(inputByte, "UTF-8"));
 					System.out.println("################################################");
-					System.out.println("");
+					System.out.println("");*/
 
 					output = msgRefactor(counter, sessionKey, iv, k, in);
 					counter = Integer.parseInt(new String(output.get(3), "UTF-8"));
@@ -561,8 +569,62 @@ public class ServerThread extends Thread {
 					
 					break;
 					
+				case "get_to_leader":
+					sigSize = in.readInt();
+					
+					System.out.println("receiving domain from leader");
+					output = msgRefactor(counter, sessionKey, iv, pubKey, in);
+					counter = Integer.parseInt(new String(output.get(3), "UTF-8"));
+					domain = output.get(0);
+					
+					System.out.println("receiving username from leader");
+					output = msgRefactor(counter, sessionKey, iv, pubKey, in);
+					counter = Integer.parseInt(new String(output.get(3), "UTF-8"));
+					username = output.get(0);
+					
+					System.out.println("Sending pass to leader");
+					
+					output = get((Key)pubKey, domain, username, sigSize);
+					pass = output.get(0);
+					
+					counter = calculateCounterServer(counter);
+					counterBytes = Integer.toString(counter).getBytes("UTF-8");
+					
+					msg = concatenate(counterBytes, output.get(0));//creates cr+Pass
+					msgSign = concatenate(msg, signature(msg));// creates MSG+SIG
+					toSend = sessionEncrypt(sessionKey, iv , msgSign);// Cipher
+					
+					out.writeInt(counterBytes.length);//size of cr
+					out.writeInt(msg.length);//size of msg+sig
+					out.writeInt(toSend.length);// Sends total length
+					
+					out.write(toSend);// Sends {MSG+SIG}serverpubkey
+				
+					System.out.println("Pass sent to leader");
+					
+					//WAIT FOR LEADER RESPONSE
+					System.out.println("Waiting for leader response");
+					output = msgRefactor(counter, sessionKey, iv, pubKey, in);
+					counter = Integer.parseInt(new String(output.get(3), "UTF-8"));
+					
+					
+					if("NOACK".equals(new String(output.get(0), "UTF-8"))) {
+						System.out.println("NO CONSENSO");	
+						break;
+					} else {
+						if(!Arrays.equals(pass, output.get(0))) {
+							System.out.println("Overwrite");
+							put(getPublicKey(output.get(1).length), domain, username, output.get(0), output.get(1));
+						}
+						
+						counter = sendRefactor("ACK".getBytes("UTF-8"), counter, sessionKey, iv, out);
+						
+					}
+					
+					break;	
+					
 				case "get":
-					byte[] getDomain, getUsername;
+					byte[] getDomain, getUsername, sigClient;
 
 					output = msgRefactor(counter, sessionKey, iv, k, in);
 					counter = Integer.parseInt(new String(output.get(3), "UTF-8"));
@@ -583,7 +645,8 @@ public class ServerThread extends Thread {
 					output = msgRefactor(counter, sessionKey, iv, k, in);
 					counter = Integer.parseInt(new String(output.get(3), "UTF-8"));
 					getUsername = output.get(0);
-
+					sigClient = output.get(1);
+					
 					System.out.println("################################################");
 					System.out.println("RECEIVED MSG:");
 					System.out.println(new String(output.get(2), "UTF-8"));
@@ -599,7 +662,7 @@ public class ServerThread extends Thread {
 					output.clear();
 					output = get(getPublicKey(256), getDomain, getUsername, 256);
 					
-					askGetCommand(getDomain, getUsername, output.get(0));
+					askGetCommand(getDomain, getUsername, output.get(0), sigClient);
 					
 					break;
 
@@ -607,15 +670,25 @@ public class ServerThread extends Thread {
 					break;
 				}
 			}
-		} catch (Exception e) {
+		} catch (NumberFormatException e) {
 			// TODO Auto-generated catch block
-			System.out.println("Connection with client " + clientUsername + " severed");
 			e.printStackTrace();
-			return;
-		}
+		} catch (UnsupportedEncodingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} catch (NoSuchAlgorithmException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} catch (InvalidKeySpecException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} 
 	}
 	
-	private void askGetCommand(byte[] domain, byte[] username){
+	private void askGetCommand(byte[] domain, byte[] username, byte[] password, byte[] sigClient){
 		System.out.println("getcommand");
 		ArrayList<byte[]> values = new ArrayList<byte[]>();
 		ArrayList<byte[]> output = new ArrayList<byte[]>();
@@ -625,9 +698,161 @@ public class ServerThread extends Thread {
 				toSend = null, challengeResponse = null, commandBytes = null;
 		
 		values.add(password);
+		for (int i = 0; i < sessionKeys.size(); i++) {
+			SecretKey sk = sessionKeys.get(i);
+			IvParameterSpec iv = ivs.get(i);
+			DataOutputStream out = outs.get(i);
+			DataInputStream in = ins.get(i);
+			try {
+				out.flush();
+				
+				//REQUEST FOllOWER TO EXECUTE put_to_leader
+				
+				actualizedCounter = sendRefactor("get_to_leader".getBytes("UTF-8"), counters.get(i), sk, iv, out);
+				counters.set(i, actualizedCounter);
+				
+				//in get_to_leader
+				
+				out.writeInt(256);
+				
+				
+				System.out.println("Sending domain to follower");
+				
+				
+				actualizedCounter = sendRefactor(domain, counters.get(i), sk, iv, out);
+				counters.set(i, actualizedCounter);
+				
+				
+				System.out.println("Sent domain to Follower");
+				
+				System.out.println("Sending username to follower");
+				
+				actualizedCounter = sendRefactor(username, counters.get(i), sk, iv, out);
+				counters.set(i, actualizedCounter);
+				
+				
+				System.out.println("Sent username to Follower");
+				
+				System.out.println("Waiting for follower response");
+				output = msgRefactor(counters.get(i), sk, iv, pubKey, in);
+				counters.set(i, Integer.parseInt(new String(output.get(3), "UTF-8")));
+				System.out.println("Received follower response");
+				
+				values.add(output.get(0));	
+				
+				System.out.println("next!!!");
+			} catch (IOException e) {
+				System.out.println("Connection Severed");
+				outs.remove(i);
+				ins.remove(i);
+				sockets.remove(i);
+				counters.remove(i);
+				ivs.remove(i);
+				sessionKeys.remove(i);
+				i--;
+				//e.printStackTrace();
+			}
+		}
+		
+		//CHECKS THE MAJORITY ELEMENT
+				System.out.println("Checking for majority element");
+				int count = 0;
+				byte[] majorityElement = null;
+			    for (int i = 0; i < values.size(); i++) {
+			        if (count == 0)
+			            majorityElement = values.get(i);
+			        if (Arrays.equals(values.get(i),majorityElement)) 
+			            count++;
+			        else
+			            count--;
+			    }
+			    count = 0;
+			    for (int i = 0; i < values.size(); i++) {
+			        if (Arrays.equals(values.get(i),majorityElement))
+			            count++;
+			    }
+			    boolean sendAck = true;
+			    if (!(count > values.size()/2)) {
+			    	sendAck = false;
+			    	System.out.println("No consensus reached");
+			    	return;
+			    }		
+			    
+			    if(!Arrays.equals(majorityElement, password)) {
+					System.out.println("Leader Overwrite");
+					put(getPublicKey(256), domain, username, majorityElement, sigClient);
+				}
+			    
+				for (int i = 0; i < sessionKeys.size(); i++) {
+					SecretKey sk = sessionKeys.get(i);
+					IvParameterSpec iv = ivs.get(i);
+					DataOutputStream out = outs.get(i);
+					DataInputStream in = ins.get(i);
+					
+					if(sendAck) {
+						System.out.println("Consensus is: " + majorityElement);
+						
+						System.out.println("Sending pass to followers");
+						
+						actualizedCounter = sendRefactor(majorityElement, counters.get(i), sk, iv, out);
+						counters.set(i, actualizedCounter);
+						
+						System.out.println("Sent pass to write to Followers");
+						try {
+							System.out.println("Waiting for follower response");
+							
+							output = msgRefactor(counters.get(i), sk, iv, pubKey, in);
+							
+							counters.set(i, Integer.parseInt(new String(output.get(3), "UTF-8")));
+							System.out.println("Received follower response");
+							
+							if((new String(output.get(0), "UTF-8").equals("ACK"))) {
+								acks++;
+								System.out.println("ACKS: " + acks);
+							}
+						} catch (NumberFormatException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						} catch (UnsupportedEncodingException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						} catch (IOException e) {
+							System.out.println("Connection Severed");
+							outs.remove(i);
+							ins.remove(i);
+							sockets.remove(i);
+							counters.remove(i);
+							ivs.remove(i);
+							sessionKeys.remove(i);
+							i--;
+							//e.printStackTrace();
+						}
+						
+					} else {
+						int counter = 0;
+						try {
+							counter = sendRefactor("NOACK".getBytes("UTF-8"), counters.get(i), sk, iv, out);
+						} catch (UnsupportedEncodingException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+						counters.set(i, counter);
+						
+					}			
+				}
+				
+				//(n+f)/2
+					if(acks >= 5/2){
+						//sendACK(true);
+						int aux = sendRefactor(majorityElement, counter, sessionKey, iv, out);
+						counter =  aux;
+					}	
+					
+		
+		
 	}
 
-	private void askPutCommand(byte[] domain, byte[] username, byte[] password, byte[] sigClient) throws IOException {
+	private void askPutCommand(byte[] domain, byte[] username, byte[] password, byte[] sigClient) {
 		System.out.println("putcommand");
 		ArrayList<byte[]> values = new ArrayList<byte[]>();
 		ArrayList<byte[]> output = new ArrayList<byte[]>();
@@ -639,7 +864,8 @@ public class ServerThread extends Thread {
 		values.add(password);
 		
 		for (int i = 0; i < sessionKeys.size(); i++) {
-			SecretKey sk = sessionKeys.get(i);
+			try{
+				SecretKey sk = sessionKeys.get(i);
 			IvParameterSpec iv = ivs.get(i);
 			DataOutputStream out = outs.get(i);
 			DataInputStream in = ins.get(i);
@@ -679,6 +905,17 @@ public class ServerThread extends Thread {
 			values.add(output.get(0));	
 			
 			System.out.println("next!!!");
+			} catch (IOException e) {
+				System.out.println("Connection Severed");
+				outs.remove(i);
+				ins.remove(i);
+				sockets.remove(i);
+				counters.remove(i);
+				ivs.remove(i);
+				sessionKeys.remove(i);
+				i--;
+				//e.printStackTrace();
+			}
 		}
 		
 		//CHECKS THE MAJORITY ELEMENT
@@ -711,6 +948,7 @@ public class ServerThread extends Thread {
 		}
 	    
 		for (int i = 0; i < sessionKeys.size(); i++) {
+			try{
 			SecretKey sk = sessionKeys.get(i);
 			IvParameterSpec iv = ivs.get(i);
 			DataOutputStream out = outs.get(i);
@@ -737,27 +975,27 @@ public class ServerThread extends Thread {
 				
 			} else {
 				//SEND WRITEBACK TO FOLLOWERS
-				/*newCounter = calculateCounterServer(counters.get(i));
-				counters.set(i, newCounter);
-				challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
-				msg = concatenate(challengeResponse, "NOACK".getBytes("UTF-8"));//challengeResponse + domain
-				msgSign = concatenate(msg, signature(msg));// creates MSG+SIG
-				toSend = sessionEncrypt(sk, iv , msgSign);// Cipher
-				
-				out.writeInt(challengeResponse.length);//sends length of cr
-				out.writeInt(msg.length);//sends length of cr+msg
-				out.writeInt(toSend.length);// Sends total length
-				
-				out.write(toSend);// Sends {MSG+SIG}serverpubkey*/
+
 				putWriteBack(domain, username);
 				int counter = sendRefactor("NOACK".getBytes("UTF-8"), counters.get(i), sk, iv, out);
 				counters.set(i, counter);
 				
-			}			
+			}		
+			} catch (IOException e) {
+				System.out.println("Connection Severed");
+				outs.remove(i);
+				ins.remove(i);
+				sockets.remove(i);
+				counters.remove(i);
+				ivs.remove(i);
+				sessionKeys.remove(i);
+				i--;
+				//e.printStackTrace();
+			}
 		}
 		
 		//(n+f)/2 
-		if(acks >= 4)
+		if(acks >= 5/2)
 			sendACK(true);
 		else sendACK(false);
 		
@@ -852,7 +1090,7 @@ public class ServerThread extends Thread {
 		}
 		
 		//(n+f)/2 
-		if(acks >= 4) {
+		if(acks >= 5/2) {
 			sendACK(true);
 			if(!Arrays.equals(majorityElement, getPublicKey(sigClient.length).getEncoded())) {
 				System.out.println("Overwrite");
@@ -873,8 +1111,10 @@ public class ServerThread extends Thread {
 
 			for (int i = 8080; i <= 8084; i++) {
 				if (i != _port) {
-					sockets.add(new Socket("localhost", i));
-					System.out.println(_port + "    :    " + i);
+					try{
+						sockets.add(new Socket("localhost", i));
+					}catch(UnknownHostException e){ continue;}
+					catch(IOException e){continue;}
 				}
 			}
 			System.out.println(sockets.size());
@@ -932,8 +1172,9 @@ public class ServerThread extends Thread {
 
 		// out.flush();
 
-		byte[] msgSign1 = encrypt(clientUsername.getBytes("UTF-8"), pubKey);
-		byte[] sig0 = signature(clientUsername.getBytes("UTF-8"));
+		String usrn = clientUsername+"| server";
+		byte[] msgSign1 = encrypt(usrn.getBytes("UTF-8"), pubKey);
+		byte[] sig0 = signature(usrn.getBytes("UTF-8"));
 		byte[] sigPart1 = encrypt(Arrays.copyOfRange(sig0, 0, (sig0.length / 2)), pubKey);
 		byte[] sigPart2 = encrypt(Arrays.copyOfRange(sig0, (sig0.length / 2), sig0.length), pubKey);
 		toSend = concatenate(msgSign1, sigPart1);
@@ -1229,7 +1470,7 @@ public class ServerThread extends Thread {
 		return null;
 	}
 
-	public ArrayList<byte[]> get(Key publicKey, byte[] domain, byte[] username, int sigSize) throws Exception {
+	public ArrayList<byte[]> get(Key publicKey, byte[] domain, byte[] username, int sigSize) throws IOException {
 		ArrayList<byte[]> output = new ArrayList<byte[]>();
 
 		StringBuilder hexString = new StringBuilder();
@@ -1571,7 +1812,9 @@ public class ServerThread extends Thread {
 		return c;
 	}
 
-	public void sendACK(boolean ack) throws IOException {
+	public void sendACK(boolean ack) {
+		try{
+
 		byte[] ackBytes = null;
 		
 		if(ack)
@@ -1586,6 +1829,11 @@ public class ServerThread extends Thread {
 		byte[] toSendBytes = sessionEncrypt(sessionKey, iv, msgSigned);
 		out.writeInt(toSendBytes.length);
 		out.write(toSendBytes);
+		} catch (IOException e) {
+			System.out.println("Connection with client "+clientUsername+ "Severed");
+			Thread.currentThread().interrupt();
+			//e.printStackTrace();
+		}
 	}
 	
 	public void putWriteBack(byte[] domain, byte[] username){

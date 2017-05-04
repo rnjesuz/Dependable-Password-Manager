@@ -1,5 +1,6 @@
 import java.io.*;
 import java.net.Socket;
+import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.security.*;
@@ -40,31 +41,35 @@ public class Client {
 	// for (1,n) regular
 	int wts = 0;
 	int acks = 0;
-	static int N = 5; // number of servers
+	static int N = 0; // number of servers
 	static int round = 1; // current command round
-	static int serverN = round % N;; // chosen server to be leader
+	static int serverN; // chosen server to be leader
 
-	public Client(String username, String password) throws IOException, UnknownHostException {
+	public Client(String username, String password) throws IOException {
 		Random rand = new Random();
 		// clientSocket = new Socket("localhost", rand.nextInt((8084 - 8080) +
 		// 1) + 8080);
 
 		for (int i = 8080; i <= 8084; i++) {
-			sockets.add(new Socket("localhost", i));
+			try{
+				sockets.add(new Socket("localhost", i));
+				N++;
+			}catch(UnknownHostException e){ continue;}
+			catch(IOException e){continue;}
 		}
 		System.out.println(sockets.size());
 		for (int i = 0; i < sockets.size(); i++) {
-			Socket s =  sockets.get(i);
+			Socket s = sockets.get(i);
 			outs.add(new DataOutputStream(s.getOutputStream()));
 			ins.add(new DataInputStream(s.getInputStream()));
 		}
 
-		//send pubKey+username
+		// send pubKey+username
 		sendUsername();
-		//initiate challenge response handshake
+		// initiate challenge response handshake
 		askServerClock();
 		// send client tag
-		//sendTag();
+		// sendTag();
 		martelaBem();
 	}
 
@@ -77,7 +82,7 @@ public class Client {
 			commandBytes = "martelo".getBytes("UTF-8");
 			System.out.println(new String(commandBytes, "UTF-8"));
 			int newCounter = calculateCounter(counters.get(i));
-			System.out.println("caculated counter: "+newCounter);
+			System.out.println("caculated counter: " + newCounter);
 			counters.set(i, newCounter);
 			byte[] challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
 			int cr = challengeResponse.length;
@@ -86,22 +91,22 @@ public class Client {
 			out.writeInt(msg.length);
 			System.out.println("Signing Request with Client Private Key");
 			byte[] msgSign = concatenate(msg, signature(msg));// creates
-																												// MSG+SIG
+																// MSG+SIG
 			System.out.println("=============================================================");
 			System.out.println("Request Sign: " + (new String(msgSign)));
 			System.out.println("Ciphering signed request, using server public key");
 			System.out.println("=============================================================");
-			byte[] toSend = sessionEncrypt(sk, iv , msgSign);// Cipher
+			byte[] toSend = sessionEncrypt(sk, iv, msgSign);// Cipher
 			System.out.println("Ciphered signed request: " + (new String(toSend)));
 			out.writeInt(toSend.length);// Sends total length
 			out.write(toSend);// Sends {MSG+SIG}serverpubkey
 			System.out.println("Request Sent");
-				
-			
-			//send 0 to flag we are client
-			//out.writeInt(0);
+
+			// send 0 to flag we are client
+			// out.writeInt(0);
 		}
 	}
+
 	public static void main(String[] args) {
 
 		Client client = null;
@@ -122,6 +127,7 @@ public class Client {
 				serverPubKey = getServerKey();
 				init(ks, username, password);
 				client = new Client(username, password);
+				serverN = round % N;
 				System.out.println("Please write");
 				break;
 			} catch (KeyStoreException e) {
@@ -163,7 +169,7 @@ public class Client {
 						System.out.println("=============================================================");
 					}
 					break;
-				
+
 				case "put":
 					String a;
 					byte[] putdomain, putusername, putpassword;
@@ -203,7 +209,7 @@ public class Client {
 					getusername = hashCode(aa);
 
 					client.retrieve_password(getdomain, getusername);
-					client.readingConcensus();
+					// client.readingConcensus();
 					break;
 
 				case "help":
@@ -250,6 +256,7 @@ public class Client {
 
 	public boolean acknowledge() throws IOException {
 
+		System.out.println(serverN + "EHHHHHHHHHHHHHHHHHHH");
 		DataInputStream in = ins.get(serverN);
 		int wtsLength = in.readInt();
 		int msgWtsLength = in.readInt();
@@ -326,8 +333,8 @@ public class Client {
 		byte[] msg;
 		byte[] sig;
 		byte[] sigPart;
-		
-		for (int i=0; i<ins.size(); i++) {
+
+		for (int i = 0; i < ins.size(); i++) {
 			DataInputStream in = ins.get(i);
 			lenght = in.readInt();
 			msgLenght = in.readInt();
@@ -378,7 +385,7 @@ public class Client {
 		 * return; } sessionKey = new SecretKeySpec(msg, 0, 16, "AES");
 		 */
 
-		for (int i=0; i<ins.size(); i++) {
+		for (int i = 0; i < ins.size(); i++) {
 			DataInputStream in = ins.get(i);
 			lenght = in.readInt();
 			msgLenght = in.readInt();
@@ -458,16 +465,16 @@ public class Client {
 		}
 
 	}
-	
+
 	private void sendTag() throws IOException {
 		byte[] msg;
 		for (int i = 0; i < sessionKeys.size(); i++) {
 			DataOutputStream out = outs.get(i);
 			SecretKey sk = sessionKeys.get(i);
 			IvParameterSpec iv = ivs.get(i);
-			if(serverN == i){
+			if (serverN == i) {
 				msg = "leader".getBytes("UTF-8");
-			}else{
+			} else {
 				msg = "follower".getBytes("UTF-8");
 			}
 			System.out.println(new String(msg, "UTF-8"));
@@ -481,9 +488,9 @@ public class Client {
 			byte[] toSend = sessionEncrypt(sk, iv, msgSign);// Cipher
 			out.writeInt(toSend.length);// Sends total length
 			out.flush();
-			out.write(toSend);	
-			
-			//send 0 to flag we are client
+			out.write(toSend);
+
+			// send 0 to flag we are client
 			out.writeInt(0);
 		}
 	}
@@ -615,6 +622,7 @@ public class Client {
 	public void register_user() throws IOException {
 		wts += 1;
 		for (int i = 0; i < sessionKeys.size(); i++) {
+			try{
 			SecretKey sk = sessionKeys.get(i);
 			IvParameterSpec iv = ivs.get(i);
 			DataOutputStream out = outs.get(i);
@@ -625,21 +633,21 @@ public class Client {
 			System.out.println("=============================================================");
 			System.out.println("Sending request to register");
 			out.flush();
-			
+
 			byte[] commandBytes;
 			if (i == serverN) {
 				// is leader
 				commandBytes = "register".getBytes("UTF-8");
-				//out.writeInt(commandBytes.length);// Sends
-																	// length of
+				// out.writeInt(commandBytes.length);// Sends
+				// length of
 			} else {
 				// is follower
 				commandBytes = "register_follow".getBytes("UTF-8");
-				//out.writeInt(commandBytes.length);
+				// out.writeInt(commandBytes.length);
 			}
-			
+
 			int newCounter = calculateCounter(counters.get(i));
-			System.out.println("caculated counter: "+newCounter);
+			System.out.println("caculated counter: " + newCounter);
 			counters.set(i, newCounter);
 			byte[] challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
 			int cr = challengeResponse.length;
@@ -648,24 +656,22 @@ public class Client {
 			out.writeInt(msg.length);
 			System.out.println("Signing Request with Client Private Key");
 			byte[] msgSign = concatenate(msg, signature(msg));// creates
-																												// MSG+SIG
+																// MSG+SIG
 			System.out.println("=============================================================");
 			System.out.println("Request Sign: " + (new String(msgSign)));
 			System.out.println("Ciphering signed request, using server public key");
 			System.out.println("=============================================================");
-			byte[] toSend = sessionEncrypt(sk, iv , msgSign);// Cipher
+			byte[] toSend = sessionEncrypt(sk, iv, msgSign);// Cipher
 			System.out.println("Ciphered signed request: " + (new String(toSend)));
 			out.writeInt(toSend.length);// Sends total length
 			out.write(toSend);// Sends {MSG+SIG}serverpubkey
 			System.out.println("Request Sent");
-			
-			
-			
+
 			byte[] wtsBytes = Integer.toString(wts).getBytes("UTF-8");
 
 			counters.set(i, calculateCounter(counters.get(i)));
 			challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
-			
+
 			out.writeInt(challengeResponse.length);
 
 			msg = concatenate(challengeResponse, wtsBytes);
@@ -679,156 +685,56 @@ public class Client {
 			out.writeInt(toSend.length);// Sends total length
 			out.write(toSend);// Sends {MSG+SIG}serverpubkey
 
-			
 			s.getOutputStream().write(bb.array());
 			s.getOutputStream().write(pubKey.getEncoded());
 			s.getOutputStream().flush();
 
+			} catch(SocketException e){
+				sessionKeys.remove(i);
+				ivs.remove(i);
+				sockets.remove(i);
+				outs.remove(i);
+				ins.remove(i);
+				counters.remove(i);
+				N--;
+				System.out.println("PLEASE TRY AGAIN");
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 	}
 
 	public void save_password(byte[] domain, byte[] username, byte[] password) {
-		try {
+		
 			wts++;
 			for (int i = 0; i < sessionKeys.size(); i++) {
-			SecretKey sk = sessionKeys.get(i);
-			IvParameterSpec iv = ivs.get(i);
-			DataOutputStream out = outs.get(i);
-
-			System.out.println("=============================================================");
-			System.out.println("Sending request to save password");
-			out.flush();
-			//out.writeInt("put".getBytes("UTF-8").length);// Sends length of msg
-
-			counters.set(i, calculateCounter(counters.get(i)));
-			byte[] challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
-			int cr = challengeResponse.length;
-			out.writeInt(cr);
-			byte[] commandBytes;
-			if (i == serverN) {
-				// is leader
-				commandBytes = "put".getBytes("UTF-8");
-				//out.writeInt(commandBytes.length);// Sends// length of
-			} else {
-				// is follower
-				commandBytes = "put_follow".getBytes("UTF-8");
-				//out.writeInt(commandBytes.length);
-			}
-			byte[] msg = concatenate(challengeResponse, commandBytes);
-			out.writeInt(msg.length);
-			System.out.println("Signing Request with Client Private Key");
-			byte[] msgSign = concatenate(msg, signature(msg));// creates
-
-			System.out.println("=============================================================");
-			System.out.println("Request Sign: " + (new String(msgSign)));
-			System.out.println("Ciphering signed request, using server public key");
-			System.out.println("=============================================================");
-			byte[] toSend = sessionEncrypt(sk, iv, msgSign);// Cipher
-			System.out.println("Ciphered signed request: " + (new String(toSend)));
-			out.writeInt(toSend.length);// Sends total length
-			out.write(toSend);// Sends {MSG+SIG}serverpubkey
-			System.out.println("Request Sent");
-
-			System.out.println("Sending domain: " + (new String(domain, "UTF-8")));
-			out.flush();
-
-			counters.set(i, calculateCounter(counters.get(i)));
-			challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
-			cr = challengeResponse.length;
-			out.writeInt(cr);
-			msg = concatenate(challengeResponse, domain);
-			out.writeInt(msg.length);
-			System.out.println("Signing Request with Client Private Key");
-			msgSign = concatenate(msg, signature(msg));// creates
-
-			System.out.println("=============================================================");
-			System.out.println("Domain Sign: " + (new String(msgSign)));
-			System.out.println("Ciphering domain, using server public key");
-			System.out.println("=============================================================");
-			// toSend = encrypt(msgSign, getServerKey());// Cipher
-			toSend = sessionEncrypt(sk, iv, msgSign);
-			System.out.println("Ciphered signed domain: " + (new String(toSend)));
-			out.writeInt(toSend.length);// Sends total length
-			out.write(toSend);// Sends {MSG+SIG}serverpubkey
-			System.out.println("Domain Sent");
-
-			System.out.println("=============================================================");
-			System.out.println("Sending username: " + (new String(username, "UTF-8")));
-			out.flush();
-
-			counters.set(i, calculateCounter(counters.get(i)));
-			challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
-			cr = challengeResponse.length;
-			out.writeInt(cr);
-			msg = concatenate(challengeResponse, username);
-			out.writeInt(msg.length);
-			System.out.println("Signing Request with Client Private Key");
-			msgSign = concatenate(msg, signature(msg));// creates
-
-			System.out.println("=============================================================");
-			System.out.println("Username Sign: " + (new String(msgSign)));
-			System.out.println("Ciphering username, using server public key");
-			System.out.println("=============================================================");
-			// toSend = encrypt(msgSign, getServerKey());// Cipher
-			toSend = sessionEncrypt(sk, iv, msgSign);
-			System.out.println("Ciphered signed username: " + (new String(toSend)));
-			out.writeInt(toSend.length);// Sends total length
-			out.write(toSend);
-			System.out.println("Username Sent");
-
-			System.out.println("=============================================================");
-			System.out.println("Sending Ciphered Password");
-			out.flush();
-			out.writeInt(password.length);
-			out.write(password);
-			System.out.println("Password Sent");
-			System.out.println("=============================================================");
-
-			byte[] wtsBytes = Integer.toString(wts).getBytes("UTF-8");
-
-			counters.set(i, calculateCounter(counters.get(i)));
-			challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
-			cr = challengeResponse.length;
-			out.writeInt(cr);
-
-			msg = concatenate(challengeResponse, wtsBytes);
-			out.writeInt(msg.length);
-			System.out.println("Signing Request with Client Private Key");
-
-			msgSign = concatenate(msg, signature(msg));// creates
-
-			toSend = sessionEncrypt(sk, iv, msgSign);
-
-			out.writeInt(toSend.length);// Sends total length
-			out.write(toSend);// Sends {MSG+SIG}serverpubkey
-
-			}
-			} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-
-	public void retrieve_password(byte[] domain, byte[] username) {
-		byte[] inputByte = null;
-		try {
-			for (int i = 0; i < sessionKeys.size(); i++) {
+			try {	
 				SecretKey sk = sessionKeys.get(i);
 				IvParameterSpec iv = ivs.get(i);
-				DataInputStream in = ins.get(i);
 				DataOutputStream out = outs.get(i);
 
 				System.out.println("=============================================================");
-				System.out.println("Sending request to retrieve password");
+				System.out.println("Sending request to save password");
 				out.flush();
-				//out.writeInt("get".getBytes("UTF-8").length);// Sends length of
-																// msg
+				// out.writeInt("put".getBytes("UTF-8").length);// Sends length
+				// of msg
 
 				counters.set(i, calculateCounter(counters.get(i)));
 				byte[] challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
 				int cr = challengeResponse.length;
 				out.writeInt(cr);
-				byte[] msg = concatenate(challengeResponse, "get".getBytes("UTF-8"));
+				byte[] commandBytes;
+				if (i == serverN) {
+					// is leader
+					commandBytes = "put".getBytes("UTF-8");
+					// out.writeInt(commandBytes.length);// Sends// length of
+				} else {
+					// is follower
+					commandBytes = "put_follow".getBytes("UTF-8");
+					// out.writeInt(commandBytes.length);
+				}
+				byte[] msg = concatenate(challengeResponse, commandBytes);
 				out.writeInt(msg.length);
 				System.out.println("Signing Request with Client Private Key");
 				byte[] msgSign = concatenate(msg, signature(msg));// creates
@@ -891,24 +797,154 @@ public class Client {
 				System.out.println("Username Sent");
 
 				System.out.println("=============================================================");
-				System.out.println("Receiving Password....");
-				int passLength = in.readInt();
-				int msgLength = in.readInt();
+				System.out.println("Sending Ciphered Password");
+				out.flush();
+				out.writeInt(password.length);
+				out.write(password);
+				System.out.println("Password Sent");
+				System.out.println("=============================================================");
 
-				byte[] inputAux = new byte[msgLength];
-				byte[] decipherInput;
-				in.readFully(inputAux, 0, msgLength);
-				decipherInput = sessionDecrypt(sk, iv, inputAux);
+				byte[] wtsBytes = Integer.toString(wts).getBytes("UTF-8");
 
-				inputByte = Arrays.copyOfRange(decipherInput, 0, passLength);
-				byte[] sig = Arrays.copyOfRange(decipherInput, passLength, passLength + 256);
+				counters.set(i, calculateCounter(counters.get(i)));
+				challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
+				cr = challengeResponse.length;
+				out.writeInt(cr);
 
-				if (!verifySignature(sig, inputByte)) {
-					System.out.println("Signature not verified, operation aborted");
-					return;
+				msg = concatenate(challengeResponse, wtsBytes);
+				out.writeInt(msg.length);
+				System.out.println("Signing Request with Client Private Key");
+
+				msgSign = concatenate(msg, signature(msg));// creates
+
+				toSend = sessionEncrypt(sk, iv, msgSign);
+
+				out.writeInt(toSend.length);// Sends total length
+				out.write(toSend);// Sends {MSG+SIG}serverpubkey
+				
+			} catch(SocketException e){
+				sessionKeys.remove(i);
+				ivs.remove(i);
+				sockets.remove(i);
+				outs.remove(i);
+				ins.remove(i);
+				counters.remove(i);
+				N--;
+				System.out.println("PLEASE TRY AGAIN");
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+	}
+
+	public void retrieve_password(byte[] domain, byte[] username) {
+		byte[] inputByte = null;
+		try {
+			for (int i = 0; i < sessionKeys.size(); i++) {
+				try{
+				if (serverN == i) {
+					SecretKey sk = sessionKeys.get(i);
+					IvParameterSpec iv = ivs.get(i);
+					DataInputStream in = ins.get(i);
+					DataOutputStream out = outs.get(i);
+
+					System.out.println("=============================================================");
+					System.out.println("Sending request to retrieve password");
+					out.flush();
+
+
+					counters.set(i, calculateCounter(counters.get(i)));
+					byte[] challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
+					int cr = challengeResponse.length;
+					out.writeInt(cr);
+					byte[] msg = concatenate(challengeResponse, "get".getBytes("UTF-8"));
+					out.writeInt(msg.length);
+					System.out.println("Signing Request with Client Private Key");
+					byte[] msgSign = concatenate(msg, signature(msg));// creates
+
+					System.out.println("=============================================================");
+					System.out.println("Request Sign: " + (new String(msgSign)));
+					System.out.println("Ciphering signed request, using server public key");
+					System.out.println("=============================================================");
+					byte[] toSend = sessionEncrypt(sk, iv, msgSign);// Cipher
+					System.out.println("Ciphered signed request: " + (new String(toSend)));
+					out.writeInt(toSend.length);// Sends total length
+					out.write(toSend);// Sends {MSG+SIG}serverpubkey
+					System.out.println("Request Sent");
+
+					System.out.println("Sending domain: " + (new String(domain, "UTF-8")));
+					out.flush();
+
+					counters.set(i, calculateCounter(counters.get(i)));
+					challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
+					cr = challengeResponse.length;
+					out.writeInt(cr);
+					msg = concatenate(challengeResponse, domain);
+					out.writeInt(msg.length);
+					System.out.println("Signing Request with Client Private Key");
+					msgSign = concatenate(msg, signature(msg));// creates
+
+					System.out.println("=============================================================");
+					System.out.println("Domain Sign: " + (new String(msgSign)));
+					System.out.println("Ciphering domain, using server public key");
+					System.out.println("=============================================================");
+
+					toSend = sessionEncrypt(sk, iv, msgSign);
+					System.out.println("Ciphered signed domain: " + (new String(toSend)));
+					out.writeInt(toSend.length);// Sends total length
+					out.write(toSend);// Sends {MSG+SIG}serverpubkey
+					System.out.println("Domain Sent");
+
+					System.out.println("=============================================================");
+					System.out.println("Sending username: " + (new String(username, "UTF-8")));
+					out.flush();
+
+					counters.set(i, calculateCounter(counters.get(i)));
+					challengeResponse = Integer.toString(counters.get(i)).getBytes("UTF-8");
+					cr = challengeResponse.length;
+					out.writeInt(cr);
+					msg = concatenate(challengeResponse, username);
+					out.writeInt(msg.length);
+					System.out.println("Signing Request with Client Private Key");
+					msgSign = concatenate(msg, signature(msg));// creates
+
+					System.out.println("=============================================================");
+					System.out.println("Username Sign: " + (new String(msgSign)));
+					System.out.println("Ciphering username, using server public key");
+					System.out.println("=============================================================");
+
+					toSend = sessionEncrypt(sk, iv, msgSign);
+					System.out.println("Ciphered signed username: " + (new String(toSend)));
+					out.writeInt(toSend.length);// Sends total length
+					out.write(toSend);
+					System.out.println("Username Sent");
+
+					System.out.println("=============================================================");
+					System.out.println("Receiving Password....");
+
+					ArrayList<byte[]> output = msgRefactor(counters.get(i), sk, iv, getServerKey(), in);
+					counter = Integer.parseInt(new String(output.get(3), "UTF-8"));
+
+					String pass = new String(decrypt(output.get(0), privKey));
+					
+					if (pass.equals("NULL")) {
+						System.out.println("No password stored under this domain/username");
+						return;
+					} else {
+						System.out.println("The password you requested: " + pass);
+						return;
+					}	
+				}}catch(SocketException e){
+					sessionKeys.remove(i);
+					ivs.remove(i);
+					sockets.remove(i);
+					outs.remove(i);
+					ins.remove(i);
+					counters.remove(i);
+					N--;
+					System.out.println("PLEASE TRY AGAIN");
 				}
-
-				receivedPasswords.add(new String(decrypt(inputByte, privKey)));
 			}
 
 		} catch (IOException e) {
@@ -1049,8 +1085,9 @@ public class Client {
 
 		return null;
 	}
-	
-	public ArrayList<byte[]> msgRefactor(int challengeResponse, SecretKey sessionKey, IvParameterSpec iv, Key k, DataInputStream in) throws IOException {
+
+	public ArrayList<byte[]> msgRefactor(int challengeResponse, SecretKey sessionKey, IvParameterSpec iv, Key k,
+			DataInputStream in) throws IOException {
 		int crLength = in.readInt();
 		int msgCrLength = in.readInt();
 		int lenght = in.readInt();
@@ -1068,8 +1105,8 @@ public class Client {
 		byte[] counterBytes = Arrays.copyOfRange(msg, 0, crLength);
 		msg = Arrays.copyOfRange(msg, crLength, msgCrLength);
 		int proposedCounter = Integer.parseInt(new String(counterBytes, "UTF-8"));
-		
-		System.out.println(proposedCounter +  "          :           "  + calculateCounter(challengeResponse) );
+
+		System.out.println(proposedCounter + "          :           " + calculateCounter(challengeResponse));
 
 		if (proposedCounter != calculateCounter(challengeResponse)) {
 			System.out.println("Challenge Response failed");
