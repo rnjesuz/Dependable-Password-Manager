@@ -642,6 +642,7 @@ public class Client {
 	public int register_user() throws IOException {
 		wts += 1;
 		for (int i = 0; i < sessionKeys.size(); i++) {
+			sockets.get(i).setSoTimeout(10000);
 			try {
 				SecretKey sk = sessionKeys.get(i);
 				IvParameterSpec iv = ivs.get(i);
@@ -735,6 +736,7 @@ public class Client {
 		wts++;
 		for (int i = 0; i < sessionKeys.size(); i++) {
 			try {
+				sockets.get(i).setSoTimeout(10000);
 				SecretKey sk = sessionKeys.get(i);
 				IvParameterSpec iv = ivs.get(i);
 				DataOutputStream out = outs.get(i);
@@ -869,6 +871,7 @@ public class Client {
 			for (int i = 0; i < sessionKeys.size(); i++) {
 				try {
 					if (serverN == i) {
+						sockets.get(i).setSoTimeout(10000);
 						SecretKey sk = sessionKeys.get(i);
 						IvParameterSpec iv = ivs.get(i);
 						DataInputStream in = ins.get(i);

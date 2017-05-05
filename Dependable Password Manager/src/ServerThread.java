@@ -75,7 +75,6 @@ public class ServerThread extends Thread {
 		privKey = getServerKey("priv");
 		pubKey = getServerKey("pub");
 		_port = port;
-
 	}
 
 	public void run() {
@@ -86,6 +85,7 @@ public class ServerThread extends Thread {
 			out = new DataOutputStream(this.socket.getOutputStream());
 
 			in = new DataInputStream(socket.getInputStream());
+			socket.setSoTimeout(3000);
 
 			// ============================================================================================================================================
 			int msgLenght;
@@ -135,8 +135,6 @@ public class ServerThread extends Thread {
 			}
 
 			String input = new String(msg, "UTF-8");
-			//String [] usrns = input.split("|");
-			//clientUsername = usrns[0];
 			clientUsername = input;
 
 		/*	System.out.println("################################################");
@@ -206,6 +204,7 @@ public class ServerThread extends Thread {
 			System.out.println("Ready For Commands");
 			// =========================================================================
 			while (socket.isConnected()) {
+				socket.setSoTimeout(0);
 				try{
 				// preparing variables for command requests
 				//msgLenght = in.readInt();
@@ -259,11 +258,12 @@ public class ServerThread extends Thread {
 				switch (input) {
 
 				case "martelo":
+					socket.setSoTimeout(3000);
 					connectServerServer(k);
 					break;
 					
 				case "register":
-
+					socket.setSoTimeout(3000);
 					System.out.println("switch case register");
 					output = msgRefactor(counter, sessionKey, iv, k, in);
 					counter = Integer.parseInt(new String(output.get(3), "UTF-8"));
@@ -305,6 +305,7 @@ public class ServerThread extends Thread {
 					break;
 
 				case "register_follow":
+					socket.setSoTimeout(3000);
 					System.out.println("switch case register follow");
 					output = msgRefactor(counter, sessionKey, iv, k, in);
 					counter = Integer.parseInt(new String(output.get(3), "UTF-8"));
@@ -335,6 +336,7 @@ public class ServerThread extends Thread {
 					break;
 					
 				case "register_to_leader":
+					socket.setSoTimeout(3000);
 					System.out.println("Follower Sending register value to leader");
 					sigSize = in.readInt();
 					
@@ -378,6 +380,7 @@ public class ServerThread extends Thread {
 					break;
 					
 				case "put":
+					socket.setSoTimeout(3000);
 					
 					try {
 						System.out.println("estou a espera");
@@ -452,7 +455,7 @@ public class ServerThread extends Thread {
 					break;
 
 				case "put_follow":
-
+					socket.setSoTimeout(3000);
 					output = msgRefactor(counter, sessionKey, iv, k, in);
 					counter = Integer.parseInt(new String(output.get(3), "UTF-8"));
 					putDomain = output.get(0);
@@ -514,6 +517,7 @@ public class ServerThread extends Thread {
 					break;
 					
 				case "put_to_leader":
+					socket.setSoTimeout(3000);
 					sigSize = in.readInt();
 					
 					System.out.println("receiving domain from leader");
@@ -571,6 +575,7 @@ public class ServerThread extends Thread {
 					break;
 					
 				case "get_to_leader":
+					socket.setSoTimeout(3000);
 					sigSize = in.readInt();
 					
 					System.out.println("receiving domain from leader");
@@ -625,6 +630,7 @@ public class ServerThread extends Thread {
 					break;	
 					
 				case "get":
+					socket.setSoTimeout(3000);
 					byte[] getDomain, getUsername, sigClient;
 
 					output = msgRefactor(counter, sessionKey, iv, k, in);
@@ -1145,6 +1151,7 @@ public class ServerThread extends Thread {
 			for (Socket s : sockets) {
 				outs.add(new DataOutputStream(s.getOutputStream()));
 				ins.add(new DataInputStream(s.getInputStream()));
+				s.setSoTimeout(3000);
 			}
 			System.out.println(outs.size());
 			System.out.println(ins.size());
@@ -1196,7 +1203,6 @@ public class ServerThread extends Thread {
 
 		// out.flush();
 
-		//String usrn = clientUsername+"|server";
 		String usrn = clientUsername;
 		byte[] msgSign1 = encrypt(usrn.getBytes("UTF-8"), pubKey);
 		byte[] sig0 = signature(usrn.getBytes("UTF-8"));
